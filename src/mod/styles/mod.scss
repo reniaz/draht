@@ -1,20 +1,40 @@
 /**
  * Deleted-message styling.
  *
- * Ported from Vencord's MessageLogger, which does not write per-element colour rules —
- * it *shadows the client's own design tokens* inside the deleted row's scope, so every
- * descendant inherits the new colour without the stylesheet needing to know what those
- * descendants are. That is what makes it survive upstream restyling.
+ * Two mechanisms are needed, and it is worth knowing why.
  *
- * Token names verified against src/styles/_variables.scss.
+ * Vencord's MessageLogger recolours purely by shadowing Discord's design tokens inside
+ * the deleted row. That works there because Discord sets colours per element. It does
+ * **not** work here on its own: telegram-tt sets `color: var(--color-text)` once, on
+ * `html, body` (src/styles/index.scss), and message text has no colour rule of its own.
+ * Custom properties resolve where they are *used*, so that `var()` resolves against the
+ * body and descendants inherit a plain computed colour — redefining `--color-text` lower
+ * down changes nothing, because nothing below ever reads it.
+ *
+ * So:
+ *   1. Token shadowing, which still does real work — MessageMeta and several other
+ *      components genuinely read `--color-text` / `--color-text-meta-rgb`.
+ *   2. An explicit `color` on the message body, for everything that merely inherits.
  */
 
 .Message.draht-deleted {
+  // (1) For descendants that read the tokens.
   --color-text: var(--color-error);
   --color-text-secondary: var(--color-error);
   --color-text-meta: var(--color-error);
+  --color-text-meta-rgb: var(--color-error-rgb);
   --color-text-meta-colored: var(--color-error);
   --color-links: var(--color-error);
+  --color-composer-button: var(--color-error);
+
+  // (2) For everything that inherits from body. `!important` and the descendant wildcard
+  // are deliberate: the goal is an unambiguous "this message is gone" signal, and the
+  // alternative is enumerating every text element telegram-tt might nest in a message and
+  // re-checking that list on every upstream change.
+  .message-content,
+  .message-content *:not(svg):not(svg *) {
+    color: var(--color-error) !important;
+  }
 
   // Media is kept but visibly inert, with a hover reveal so it stays readable.
   .media-inner,

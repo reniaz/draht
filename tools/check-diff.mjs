@@ -22,6 +22,8 @@ const ALLOWLIST = {
   'src/index.tsx': 3,
   'src/global/actions/apiUpdaters/messages.ts': 10,
   'src/components/middle/message/Message.tsx': 6,
+  // Every title update funnels through setPageTitleInstant, so one call covers them all.
+  'src/util/updatePageTitle.ts': 8,
   'src/components/middle/message/MessageContextMenu.tsx': 6,
   'src/hooks/useChatContextActions.ts': 6,
   // Single mount point for root-level mod UI; further modals nest inside ModRoot.

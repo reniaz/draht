@@ -13,6 +13,8 @@ export default defineConfig({
   define: {
     APP_VERSION: JSON.stringify('mod-test'),
     APP_REVISION: JSON.stringify('mod-test'),
+    // Normally injected by vite.config.ts from APP_TITLE in .env.
+    'import.meta.env.TG_APP_TITLE': JSON.stringify('Draht'),
   },
   resolve: {
     // Mirrors the `paths` in tsconfig.base.json. Needed because the mod's ActionBus
