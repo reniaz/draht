@@ -15,6 +15,7 @@ type DrahtNative = {
   focusWindow: () => void;
   flashWindow: () => void;
   appVersion?: () => Promise<string | undefined>;
+  exportTheme?: (name: string, content: string) => Promise<string | undefined>;
   listThemes: () => Promise<{ file: string; content: string }[]>;
   themesDir: () => Promise<string>;
   openThemesFolder: () => void;

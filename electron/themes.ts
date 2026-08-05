@@ -1,4 +1,4 @@
-import { app, ipcMain, shell } from 'electron';
+import { app, dialog, ipcMain, shell } from 'electron';
 import {
   copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync,
 } from 'node:fs';
@@ -121,6 +121,33 @@ export function initThemes() {
   });
 
   ipcMain.handle('draht:themes-dir', () => themesDir());
+
+  /**
+   * Writes a theme out, offering the themes folder first.
+   *
+   * A browser download would put it in Downloads, from where it does nothing until it is
+   * moved by hand. Starting the dialog in the themes folder means the obvious answer —
+   * pressing Save — leaves the theme somewhere it actually takes effect, while still
+   * allowing it to be put anywhere for sharing.
+   */
+  ipcMain.handle('draht:export-theme', async (_event, payload: { name: string; content: string }) => {
+    try {
+      const dir = ensureThemesDir();
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        title: 'Export theme',
+        defaultPath: join(dir, payload.name),
+        filters: [{ name: 'Theme', extensions: ['json'] }],
+      });
+
+      if (canceled || !filePath) return undefined;
+
+      writeFileSync(filePath, payload.content, 'utf8');
+
+      return filePath;
+    } catch {
+      return undefined;
+    }
+  });
 
   ipcMain.on('draht:open-themes-folder', () => {
     void shell.openPath(ensureThemesDir());

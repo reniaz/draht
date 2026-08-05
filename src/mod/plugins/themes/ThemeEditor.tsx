@@ -84,21 +84,6 @@ const ThemeEditor: FC = () => {
     rerender();
   }
 
-  /** Whatever is on screen: the custom colours, or the selected theme's own. */
-  function currentSeed() {
-    if (isCustom) return seed;
-    if (selected === 'off') return TELEGRAM_DARK;
-
-    return findTheme(selected)?.seed ?? TELEGRAM_DARK;
-  }
-
-  function currentName() {
-    if (isCustom) return 'My theme';
-    if (selected === 'off') return 'Telegram Dark';
-
-    return findTheme(selected)?.label ?? 'My theme';
-  }
-
   /** Your own display name, as the most likely answer to "who made this". */
   function defaultAuthor() {
     try {
@@ -111,19 +96,28 @@ const ThemeEditor: FC = () => {
     }
   }
 
-  function exportTheme(name: string, author: string) {
-    const blob = new Blob([stringifyTheme(name, currentSeed(), author)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    // A theme called "Tokyo Night" should not download as my-theme.json.
-    link.download = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'theme'}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+  async function exportTheme(name: string, author: string) {
+    const content = stringifyTheme(name, seed, author);
+    // A theme called "Tokyo Night" should not be offered as my-theme.json.
+    const file = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'theme'}.json`;
 
     setIsExportOpen(false);
+
+    if (window.draht?.exportTheme) {
+      const saved = await window.draht.exportTheme(file, content);
+      // Saved into the themes folder, most likely, where it should appear in the list
+      // straight away rather than after a manual reload.
+      if (saved) await refresh();
+      return;
+    }
+
+    // Outside Electron there is no save dialog; a download is the only route.
+    const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = file;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   const available = getAvailableThemes();
@@ -189,9 +183,6 @@ const ThemeEditor: FC = () => {
           </Button>
         )}
         <Button size="tiny" isText onClick={refresh}>Reload themes</Button>
-        {/* Not only for the custom theme: exporting a bundled one is how you start from
-            something close and edit the file. */}
-        <Button size="tiny" isText onClick={() => setIsExportOpen(true)}>Export theme…</Button>
       </div>
 
       {themesPath && (
@@ -218,6 +209,7 @@ const ThemeEditor: FC = () => {
           ))}
 
           <div className="draht-theme-actions">
+            <Button size="tiny" isText onClick={() => setIsExportOpen(true)}>Export theme…</Button>
             <Button size="tiny" isText color="danger" onClick={() => setIsResetOpen(true)}>
               Reset colours
             </Button>
@@ -227,7 +219,7 @@ const ThemeEditor: FC = () => {
 
       <ExportThemeDialog
         isOpen={isExportOpen}
-        defaultName={currentName()}
+        defaultName="My theme"
         defaultAuthor={defaultAuthor()}
         onExport={exportTheme}
         onClose={() => setIsExportOpen(false)}

@@ -56,6 +56,11 @@ contextBridge.exposeInMainWorld('draht', {
     return ipcRenderer.invoke('draht:list-themes');
   },
 
+  /** Saves a theme file, with the save dialog starting in the themes folder. */
+  exportTheme(name: string, content: string): Promise<string | undefined> {
+    return ipcRenderer.invoke('draht:export-theme', { name, content });
+  },
+
   themesDir(): Promise<string> {
     return ipcRenderer.invoke('draht:themes-dir');
   },
