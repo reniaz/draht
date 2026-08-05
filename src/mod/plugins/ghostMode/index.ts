@@ -139,10 +139,13 @@ const settings = definePluginSettings({
   },
   hideOnlineStatus: {
     type: OptionType.BOOLEAN,
-    displayName: 'Stay offline',
+    displayName: 'Stay offline (briefly breaks when you send)',
     description:
-      'Report yourself as offline even while using Draht. Note this also stops Telegram '
-      + 'suppressing notifications on your phone, since it no longer knows you are here.',
+      'Report yourself as offline even while using Draht. Sending a message shows you '
+      + 'online for a moment: Telegram marks you online at its end when it handles the '
+      + 'message, and the only thing that can undo it is another request straight after. '
+      + 'Also note this stops Telegram suppressing notifications on your phone, since it '
+      + 'no longer knows you are here.',
     default: true,
     onChange: () => apply(),
   },
