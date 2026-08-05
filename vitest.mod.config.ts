@@ -32,6 +32,6 @@ export default defineConfig({
     setupFiles: ['./src/mod/testSetup.ts'],
     // `electron/` too: the main process has logic worth testing (version comparison
     // decides whether an update is ever offered) and nothing there needs a browser.
-    include: ['src/mod/**/*.test.ts', 'electron/**/*.test.ts'],
+    include: ['src/mod/**/*.test.ts', 'electron/**/*.test.ts', 'tools/**/*.test.mjs'],
   },
 });

@@ -18,6 +18,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 import { cleanRelease } from './clean-release.mjs';
+import { buildNotes } from './notes.mjs';
 
 function run(cmd, args, opts = {}) {
   return execFileSync(cmd, args, { encoding: 'utf8', stdio: 'pipe', ...opts }).trim();
@@ -61,7 +62,15 @@ async function ensureRelease() {
 
   const created = await gh('/releases', {
     method: 'POST',
-    body: JSON.stringify({ tag_name: tag, name: version, draft: false, prerelease: false }),
+    body: JSON.stringify({
+      tag_name: tag,
+      name: version,
+      // Written from the commits in this release, so the page says what changed instead
+      // of being an empty shell under a version number.
+      body: buildNotes(tag, { owner, repo, version }).markdown,
+      draft: false,
+      prerelease: false,
+    }),
   });
 
   if (!created.ok) {
@@ -219,6 +228,21 @@ await verifyRelease();
  */
 console.log('');
 cleanRelease(version);
+
+/*
+ * 10. Announce it.
+ *
+ * Last, and unable to fail the release: the build is already published and clients can
+ * already update, so an outage at Discord must not be reported as a failed release.
+ */
+try {
+  runLive('node', ['tools/announce.mjs', version]);
+} catch {
+  // runLive throws on a non-zero exit, and letting that through would abort the script
+  // after the release is already live — reporting a published release as a failure.
+  console.error('\n  Announcing failed. The release itself is published and complete.');
+  console.error('  Re-run it with `npm run mod:announce -- ' + version + '`.');
+}
 
 console.log(`\n  Released ${tag}.`);
 console.log('  Installed copies will pick it up on their next launch.\n');

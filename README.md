@@ -133,6 +133,48 @@ manifest to a GitHub Release. Installed copies pick it up on their next launch.
 
 Needs `GH_TOKEN` (a GitHub token with `repo` scope).
 
+The release notes are generated from the commits since the previous tag, and become both
+the GitHub release body and the announcements below.
+
+### Announcing releases
+
+Releases can post themselves to a Discord channel and a Telegram channel. Both are
+optional — with neither configured the release runs exactly as before.
+
+**Discord** uses an incoming webhook, not a bot. A bot would need an application, a token,
+an invite with scopes and a gateway connection, and none of that buys anything for a
+message posted on release. In Discord: *Channel Settings → Integrations → Webhooks → New
+Webhook*, then copy the URL.
+
+```powershell
+setx DRAHT_DISCORD_WEBHOOK "https://discord.com/api/webhooks/..."
+```
+
+**Telegram** needs a bot, because Telegram has no equivalent of an incoming webhook — its
+webhooks *receive* updates rather than post messages. Talk to
+[@BotFather](https://t.me/BotFather), `/newbot`, and keep the token. Then add the bot to
+your channel as an administrator with permission to post.
+
+```powershell
+setx DRAHT_TELEGRAM_TOKEN "123456:ABC..."
+setx DRAHT_TELEGRAM_CHAT "@yourchannel"
+```
+
+`DRAHT_TELEGRAM_CHAT` is the channel's public @name, or its numeric id for a private one
+(add [@userinfobot](https://t.me/userinfobot) to the channel to read the id).
+
+Both values are secrets — anyone holding them can post as you. Keep them in your
+environment, never in the repo. To re-post an announcement for a release that already
+exists:
+
+```bash
+npm run mod:announce -- 1.0.11
+```
+
+Announcing runs last and cannot fail a release: by the time it runs the installer is
+published and clients can already update, so an outage at Discord is reported as a failed
+announcement, not a failed release.
+
 Architecture and contributor notes live in **[README.mod.md](README.mod.md)** — how the
 plugin system hooks into upstream, and how to rebase onto new telegram-tt releases.
 
