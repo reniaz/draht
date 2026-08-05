@@ -46,7 +46,31 @@ const DrahtVersion: FC = () => {
     node.append(name, author);
     scroller.appendChild(node);
 
-    return () => node.remove();
+    // On a short screen the end of the content is nowhere near the bottom of the panel,
+    // which reads as the line having been dropped under the last row. Taking up the slack
+    // as a margin puts it at the foot of short screens and leaves it at the end of the
+    // content on long ones. Measuring is what keeps this from touching upstream layout:
+    // the alternative, a flex column, would change how every settings screen is laid out
+    // for the sake of one decorative line.
+    const place = () => {
+      node.style.marginTop = '0px';
+      const free = scroller.clientHeight - scroller.scrollHeight;
+      if (free > 0) node.style.marginTop = `${free}px`;
+    };
+
+    place();
+
+    // The panel resizes with the window; content arrives late on screens that load.
+    const onResize = new ResizeObserver(place);
+    onResize.observe(scroller);
+    const onContentChange = new MutationObserver(place);
+    onContentChange.observe(scroller, { childList: true });
+
+    return () => {
+      onResize.disconnect();
+      onContentChange.disconnect();
+      node.remove();
+    };
   }, [version]);
 
   return <div ref={anchorRef} className="draht-version-anchor" />;
