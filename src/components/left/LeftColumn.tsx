@@ -201,6 +201,7 @@ function LeftColumn({
         // #region mod
         case SettingsScreens.ModTheme:
         case SettingsScreens.ModPluginList:
+        case SettingsScreens.ModGeneral:
           openSettingsScreen({ screen: SettingsScreens.ModPlugins });
           return;
         // #endregion mod

@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
  * These are source assertions rather than behavioural ones because there is no Teact
  * component harness here. They cost nothing and they guard the step that gets forgotten.
  */
-const SCREENS = ['ModPlugins', 'ModTheme', 'ModPluginList'];
+const SCREENS = ['ModPlugins', 'ModTheme', 'ModPluginList', 'ModGeneral'];
 
 const FILES = {
   enum: 'src/types/index.ts',

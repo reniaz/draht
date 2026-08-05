@@ -7,6 +7,7 @@ import { SettingsScreens } from '../../../types';
 import useHistoryBack from '../../../hooks/useHistoryBack';
 
 import ListItem from '../../../components/ui/ListItem';
+import ModGeneral from './ModGeneral';
 import ModPluginList from './ModPluginList';
 import ModThemeScreen from './ModThemeScreen';
 
@@ -41,8 +42,19 @@ const ModSettings: FC<OwnProps> = ({ screen, isActive, onReset }) => {
     return <ModPluginList />;
   }
 
+  if (screen === SettingsScreens.ModGeneral) {
+    return <ModGeneral />;
+  }
+
   return (
     <div className="settings-content custom-scroll draht-settings">
+      <ListItem
+        icon="settings"
+        narrow
+        onClick={() => openSettingsScreen({ screen: SettingsScreens.ModGeneral })}
+      >
+        General
+      </ListItem>
       <ListItem
         icon="brush"
         narrow

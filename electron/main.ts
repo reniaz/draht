@@ -100,7 +100,11 @@ function createWindow(startUrl: string, appOrigin: string) {
   });
 
   win.webContents.setWindowOpenHandler(({ url }) => {
-    openExternally(url);
+    // The app is served over loopback HTTP, so its own URLs pass the http/https test and
+    // would be handed to the OS browser — a second copy of the client, in Chrome, at a
+    // localhost address. Anything internal is handled inside this window instead.
+    if (!isInternalUrl(url, appOrigin)) openExternally(url);
+
     return { action: 'deny' };
   });
 

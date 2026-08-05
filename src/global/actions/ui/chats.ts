@@ -16,6 +16,9 @@ import {
 import { updateTabState } from '../../reducers/tabs';
 import { replaceTabThreadParam } from '../../reducers/threads';
 import { selectChat, selectCurrentMessageList, selectTabState } from '../../selectors';
+// #region mod
+import { runOpenChatInNewTab } from '../../../mod/api/Seams';
+// #endregion mod
 
 addActionHandler('openDeleteMemberModal', (global, actions, payload): ActionReturnType => {
   const { chatId, peerId, tabId = getCurrentTabId() } = payload;
@@ -114,6 +117,10 @@ addActionHandler('processOpenChatOrThread', (global, actions, payload): ActionRe
 
 addActionHandler('openChatInNewTab', (global, actions, payload): ActionReturnType => {
   const { chatId, threadId = MAIN_THREAD_ID } = payload;
+
+  // #region mod
+  if (runOpenChatInNewTab(chatId, threadId)) return;
+  // #endregion mod
 
   const hashUrl = createMessageHashUrl(chatId, 'thread', threadId);
 

@@ -4,6 +4,7 @@ import type { MenuItemContextAction } from '../../components/ui/ListItem';
 
 import type { ApiMessage } from '../../api/types';
 import type { GlobalState } from '../../global/types';
+import type { ThreadId } from '../../types';
 
 import { modLogger } from './Logger';
 
@@ -59,11 +60,18 @@ export type MessageMenuItems = (message: ApiMessage) => TeactNode | undefined;
  */
 export type ChatMenuItems = (chatId: string) => MenuItemContextAction[] | undefined;
 
+/**
+ * Handles "open in new tab". Returning true means the mod took it, and upstream must not
+ * also open a window.
+ */
+export type OpenChatInNewTab = (chatId: string, threadId: ThreadId) => boolean;
+
 type SeamRegistry = {
   beforeDeleteMessages: BeforeDeleteMessages[];
   messageClassNames: MessageClassNames[];
   messageMenuItems: MessageMenuItems[];
   chatMenuItems: ChatMenuItems[];
+  openChatInNewTab: OpenChatInNewTab[];
 };
 
 const seams: SeamRegistry = {
@@ -71,6 +79,7 @@ const seams: SeamRegistry = {
   messageClassNames: [],
   messageMenuItems: [],
   chatMenuItems: [],
+  openChatInNewTab: [],
 };
 
 export function addSeam<K extends keyof SeamRegistry>(name: K, fn: SeamRegistry[K][number]) {
@@ -189,4 +198,23 @@ export function runMessageClassNames(
   }
 
   return result;
+}
+
+/**
+ * Called at the top of upstream `openChatInNewTab`.
+ *
+ * Upstream opens a real browser window with `window.open`. In Electron that means the OS
+ * browser and a second copy of the app, which is not what "new tab" should mean in a
+ * desktop client — so a handler that returns true keeps the chat inside this window.
+ */
+export function runOpenChatInNewTab(chatId: string, threadId: ThreadId): boolean {
+  for (const handler of seams.openChatInNewTab) {
+    try {
+      if (handler(chatId, threadId)) return true;
+    } catch (err) {
+      modLogger.error('openChatInNewTab seam failed', err);
+    }
+  }
+
+  return false;
 }

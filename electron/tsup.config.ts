@@ -19,6 +19,7 @@ export default defineConfig([
       smoke: 'electron/smoke.ts',
       diagnose: 'electron/diagnose.ts',
       diagnoseFonts: 'electron/diagnoseFonts.ts',
+      diagnoseTabs: 'electron/diagnoseTabs.ts',
     },
     outDir: 'electron/dist',
     format: ['cjs'],

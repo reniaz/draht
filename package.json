@@ -57,7 +57,8 @@
     "mod:clean": "node tools/clean-release.mjs",
     "mod:diagnose:fonts": "npm run mod:shell && cross-env DRAHT_PORT=49998 electron electron/dist/diagnoseFonts.cjs",
     "mod:announce": "node tools/announce.mjs",
-    "mod:telegram:chats": "node tools/telegram-chats.mjs"
+    "mod:telegram:chats": "node tools/telegram-chats.mjs",
+    "mod:diagnose:tabs": "npm run mod:shell && cross-env DRAHT_PORT=49997 electron electron/dist/diagnoseTabs.cjs"
   },
   "engines": {
     "node": "^24.11 || ^26",

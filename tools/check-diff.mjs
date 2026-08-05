@@ -29,20 +29,25 @@ const ALLOWLIST = {
   // a main-thread plugin would never be seen.
   'src/api/gramjs/worker/connector.ts': 10,
   'src/components/middle/message/MessageContextMenu.tsx': 6,
+
+  // Chat tabs. Upstream's "open in new tab" opens a browser window, which in Electron is
+  // the OS browser showing a second copy of the client; the seam keeps it in this one.
+  'src/global/actions/ui/chats.ts': 8,
+  'src/components/middle/MiddleColumn.tsx': 8,
   'src/hooks/useChatContextActions.ts': 6,
   // Single mount point for root-level mod UI; further modals nest inside ModRoot.
   'src/components/App.tsx': 6,
 
   // Settings UI wiring. All four delegate to src/mod/components/settings/ModSettings.tsx,
   // so additional mod screens nest inside that one and cost nothing here.
-  'src/types/index.ts': 6,
+  'src/types/index.ts': 7,
   'src/components/left/settings/Settings.tsx': 14,
-  'src/components/left/settings/SettingsHeader.tsx': 10,
+  'src/components/left/settings/SettingsHeader.tsx': 12,
   'src/components/left/settings/SettingsMain.tsx': 10,
-  'src/components/left/LeftColumn.tsx': 12,
+  'src/components/left/LeftColumn.tsx': 13,
   // Config files, not seam call sites — the tight budget is about keeping *code* edits
   // surgical, and does not buy anything here.
-  'package.json': 40,
+  'package.json': 46,
   // Must track package.json's version; upstream's own update checker compares them.
   'public/version.txt': 4,
   '.gitignore': 10,

@@ -110,6 +110,8 @@ const SettingsHeader: FC<OwnProps> = ({
         return <h3>Theme</h3>;
       case SettingsScreens.ModPluginList:
         return <h3>Plugins</h3>;
+      case SettingsScreens.ModGeneral:
+        return <h3>General</h3>;
       // #endregion mod
 
       case SettingsScreens.GeneralChatBackground:

@@ -287,6 +287,7 @@ export enum SettingsScreens {
   ModPlugins,
   ModTheme,
   ModPluginList,
+  ModGeneral,
   // #endregion mod
 }
 

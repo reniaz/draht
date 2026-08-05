@@ -95,6 +95,9 @@ import FrozenAccountPlaceholder from './FrozenAccountPlaceholder';
 import MessageList from './MessageList';
 import MessageSelectToolbar from './MessageSelectToolbar';
 import MiddleHeader from './MiddleHeader';
+// #region mod
+import ChatTabBar from '../../mod/plugins/chatTabs/TabBar';
+// #endregion mod
 import MiddleHeaderPanes from './MiddleHeaderPanes';
 import PremiumRequiredPlaceholder from './PremiumRequiredPlaceholder';
 import ReactorListModal from './ReactorListModal.async';
@@ -564,6 +567,9 @@ function MiddleColumn({
       {Boolean(renderingChatId && renderingThreadId) && (
         <>
           <div className="messages-layout" onDragEnter={renderingCanPost ? handleDragEnter : undefined}>
+            {/* #region mod */}
+            <ChatTabBar />
+            {/* #endregion mod */}
             <MiddleHeaderPanes
               key={`${renderingChatId}-${renderingThreadId}-${renderingMessageListType}`}
               chatId={renderingChatId!}

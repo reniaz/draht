@@ -319,6 +319,7 @@ const Settings: FC<OwnProps> = ({
       case SettingsScreens.ModPlugins:
       case SettingsScreens.ModTheme:
       case SettingsScreens.ModPluginList:
+      case SettingsScreens.ModGeneral:
         return <ModSettings screen={currentScreen} isActive={isScreenActive} onReset={handleReset} />;
       // #endregion mod
       case SettingsScreens.GeneralChatBackground:
