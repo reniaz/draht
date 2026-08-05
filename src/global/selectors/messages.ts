@@ -102,6 +102,9 @@ import { selectTopic, selectTopicFromMessage } from './topics';
 import {
   selectBot, selectIsUserChatProtected, selectUser, selectUserStatus,
 } from './users';
+// #region mod
+import { runSuppressFirstUnread } from '../../mod/api/Seams';
+// #endregion mod
 
 export function selectCurrentMessageList<T extends GlobalState>(
   global: T,
@@ -824,6 +827,10 @@ export function selectRealLastReadId<T extends GlobalState>(global: T, chatId: s
 export function selectFirstUnreadId<T extends GlobalState>(
   global: T, chatId: string, threadId: ThreadId,
 ) {
+  // #region mod
+  if (runSuppressFirstUnread()) return undefined;
+  // #endregion mod
+
   const chat = selectChat(global, chatId);
 
   if (threadId === MAIN_THREAD_ID) {

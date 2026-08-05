@@ -73,14 +73,19 @@ export type OpenChatInNewTab = (chatId: string, threadId: ThreadId) => boolean;
 export type OpenOwnProfile = () => boolean;
 
 /**
- * Whether an incoming message should always scroll the list to the bottom.
+ * Whether to report every chat as having no first unread message.
  *
- * Upstream scrolls to the first unread message instead when the window is in the
- * background. That is right when the unread marker is accurate, and wrong here: hiding
- * read receipts means the marker never clears, so a chat you have read parks itself on an
- * old message every time something arrives while you are looking elsewhere.
+ * The unread marker is only meaningful if the server is told what you have read. With read
+ * receipts hidden it never clears, and upstream reasonably trusts it in several places:
+ * it anchors an opening chat there, it scrolls arriving messages there when the window is
+ * in the background, and — the one that makes the client unusable — it refuses to add a
+ * new message to the viewport unless the viewport still contains that marker. Once the
+ * conversation has moved past it, incoming messages stop appearing at all.
+ *
+ * Suppressing the marker at its source fixes all of those together, rather than patching
+ * each place that trusts it.
  */
-export type ForceScrollToBottom = () => boolean;
+export type SuppressFirstUnread = () => boolean;
 
 type SeamRegistry = {
   beforeDeleteMessages: BeforeDeleteMessages[];
@@ -89,7 +94,7 @@ type SeamRegistry = {
   chatMenuItems: ChatMenuItems[];
   openChatInNewTab: OpenChatInNewTab[];
   openOwnProfile: OpenOwnProfile[];
-  forceScrollToBottom: ForceScrollToBottom[];
+  suppressFirstUnread: SuppressFirstUnread[];
 };
 
 const seams: SeamRegistry = {
@@ -99,7 +104,7 @@ const seams: SeamRegistry = {
   chatMenuItems: [],
   openChatInNewTab: [],
   openOwnProfile: [],
-  forceScrollToBottom: [],
+  suppressFirstUnread: [],
 };
 
 export function addSeam<K extends keyof SeamRegistry>(name: K, fn: SeamRegistry[K][number]) {
@@ -258,18 +263,19 @@ export function runOpenOwnProfile(): boolean {
   return false;
 }
 
+
 /**
- * Called for each incoming message, deciding whether the list follows it to the bottom.
+ * Called at the top of upstream `selectFirstUnreadId`.
  *
- * Kept to a plain boolean and no arguments: this runs on the message-list hot path, and
+ * Kept to a plain boolean and no arguments: this is a selector on the message path, and
  * with no handlers attached it is one empty-array check.
  */
-export function runForceScrollToBottom(): boolean {
-  for (const handler of seams.forceScrollToBottom) {
+export function runSuppressFirstUnread(): boolean {
+  for (const handler of seams.suppressFirstUnread) {
     try {
       if (handler()) return true;
     } catch (err) {
-      modLogger.error('forceScrollToBottom seam failed', err);
+      modLogger.error('suppressFirstUnread seam failed', err);
     }
   }
 

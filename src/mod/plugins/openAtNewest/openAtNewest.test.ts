@@ -16,18 +16,18 @@ async function bootWith(enabled: boolean) {
 }
 
 describe('OpenAtNewest', () => {
-  it('makes incoming messages scroll to the bottom', async () => {
-    // The seam is consulted on the message-list hot path and has no other observable
-    // effect, so nothing but this says whether the plugin is connected to it at all.
+  it('suppresses the unread marker', async () => {
+    // The seam is consulted inside a selector and has no other observable effect, so
+    // nothing but this says whether the plugin is connected to it at all.
     const { seams } = await bootWith(true);
 
-    expect(seams.runForceScrollToBottom()).toBe(true);
+    expect(seams.runSuppressFirstUnread()).toBe(true);
   });
 
   it("leaves upstream's behaviour alone when disabled", async () => {
     const { seams } = await bootWith(false);
 
-    expect(seams.runForceScrollToBottom()).toBe(false);
+    expect(seams.runSuppressFirstUnread()).toBe(false);
   });
 
   it('releases the seam when stopped', async () => {
@@ -36,6 +36,6 @@ describe('OpenAtNewest', () => {
 
     stopPlugin(plugin);
 
-    expect(seams.runForceScrollToBottom()).toBe(false);
+    expect(seams.runSuppressFirstUnread()).toBe(false);
   });
 });
