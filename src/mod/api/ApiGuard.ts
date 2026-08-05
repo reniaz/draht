@@ -1,44 +1,80 @@
-
 /**
- * Lets plugins stop specific requests from reaching Telegram.
+ * Lets plugins drop or rewrite requests before they reach Telegram.
  *
  * The ActionBus cannot do this: every registered handler runs, so a plugin can observe an
- * action but not cancel it. Suppression has to happen where the request is actually made,
- * which is `callApi` in `src/api/gramjs/methods/init.ts` — the single point every
- * outgoing method goes through.
+ * action but not cancel it. Interception has to happen where the request is made, which is
+ * `callApi` in `src/api/gramjs/worker/connector.ts` — the main-thread entry point every
+ * outgoing method passes through.
  *
- * Blocked calls resolve with `undefined` rather than throwing. Callers treat these as
- * fire-and-forget (`void callApi(...)`), and a rejection would surface as an unhandled
- * error for something the user deliberately turned off.
+ * Note this is *not* `methods/init.ts`. That `callApi` runs inside the GramJS Web Worker,
+ * where a block registered by a main-thread plugin would never be seen — it looks correct
+ * and silently does nothing.
+ *
+ * Rewriting matters as much as blocking. Suppressing "I am online" only makes the client
+ * silent, and Telegram then infers presence from activity; appearing offline requires
+ * actively saying so. Blocking is therefore the special case, not the primitive.
  */
-const blocked = new Map<string, Set<string>>();
+export const BLOCK = Symbol('draht:block');
 
-/** `owner` is the plugin name, so one plugin unblocking cannot undo another's block. */
+export type ApiInterceptor = (args: any[]) => any[] | typeof BLOCK;
+
+type Entry = { owner: string; intercept: ApiInterceptor };
+
+const interceptors = new Map<string, Entry[]>();
+
+export function interceptApiMethod(owner: string, method: string, intercept: ApiInterceptor) {
+  const entries = interceptors.get(method) ?? [];
+  // One interceptor per owner per method, so re-applying settings cannot stack duplicates.
+  const existing = entries.findIndex((entry) => entry.owner === owner);
+  if (existing !== -1) entries.splice(existing, 1);
+
+  entries.push({ owner, intercept });
+  interceptors.set(method, entries);
+}
+
+/** Sugar for the common case: drop the call entirely. */
 export function blockApiMethod(owner: string, method: string) {
-  const owners = blocked.get(method) ?? new Set<string>();
-  owners.add(owner);
-  blocked.set(method, owners);
+  interceptApiMethod(owner, method, () => BLOCK);
 }
 
 export function unblockApiMethod(owner: string, method: string) {
-  const owners = blocked.get(method);
-  if (!owners) return;
+  const entries = interceptors.get(method);
+  if (!entries) return;
 
-  owners.delete(owner);
-  if (!owners.size) blocked.delete(method);
+  const index = entries.findIndex((entry) => entry.owner === owner);
+  if (index !== -1) entries.splice(index, 1);
+  if (!entries.length) interceptors.delete(method);
 }
 
 export function unblockAllForOwner(owner: string) {
-  for (const method of [...blocked.keys()]) {
+  for (const method of [...interceptors.keys()]) {
     unblockApiMethod(owner, method);
   }
 }
 
 /**
- * Called from upstream's `callApi`, so it runs on every single API request. Kept to a
- * size check and a map lookup, with no logging — this is the hottest path the mod
- * touches.
+ * Called from upstream's `callApi`, so it runs on every API request. The empty-map check
+ * keeps the cost to one property read when no plugin is intercepting anything.
+ *
+ * Returns the arguments to send, or `undefined` to drop the call.
  */
+export function interceptApiCall(method: string, args: any[]): any[] | undefined {
+  if (!interceptors.size) return args;
+
+  const entries = interceptors.get(method);
+  if (!entries?.length) return args;
+
+  let next = args;
+  for (const { intercept } of entries) {
+    const result = intercept(next);
+    if (result === BLOCK) return undefined;
+    next = result;
+  }
+
+  return next;
+}
+
+/** Kept for tests and callers that only care whether something is being dropped. */
 export function isApiMethodBlocked(method: string) {
-  return blocked.size > 0 && blocked.has(method);
+  return interceptApiCall(method, []) === undefined;
 }

@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import { blockApiMethod, isApiMethodBlocked, unblockAllForOwner } from './ApiGuard';
+import {
+  blockApiMethod, interceptApiCall, interceptApiMethod, isApiMethodBlocked, unblockAllForOwner,
+} from './ApiGuard';
 
 describe('ApiGuard', () => {
   it('blocks only what it is asked to', () => {
@@ -12,6 +14,31 @@ describe('ApiGuard', () => {
 
     unblockAllForOwner('T');
     expect(isApiMethodBlocked('alpha')).toBe(false);
+  });
+
+  it('passes arguments through untouched when nothing intercepts', () => {
+    expect(interceptApiCall('untouched', [1, 'two'])).toEqual([1, 'two']);
+  });
+
+  it('rewrites arguments when an interceptor returns new ones', () => {
+    interceptApiMethod('T', 'gamma', () => [false]);
+
+    expect(interceptApiCall('gamma', [true])).toEqual([false]);
+
+    unblockAllForOwner('T');
+    expect(interceptApiCall('gamma', [true])).toEqual([true]);
+  });
+
+  it('does not stack duplicate interceptors for the same owner', () => {
+    let calls = 0;
+    const count = (args: any[]) => { calls++; return args; };
+
+    interceptApiMethod('T', 'delta', count);
+    interceptApiMethod('T', 'delta', count);
+    interceptApiCall('delta', []);
+
+    expect(calls).toBe(1);
+    unblockAllForOwner('T');
   });
 });
 
@@ -39,11 +66,12 @@ describe('ApiGuard is wired into the callApi the app actually uses', () => {
   });
 
   it('has the guard in the main-thread callApi', () => {
-    expect(connector).toContain('isApiMethodBlocked');
+    expect(connector).toContain('interceptApiCall');
   });
 
   it('does not have the guard in the worker-side callApi', () => {
     // Harmless but misleading: it would never fire, and would suggest the feature works.
-    expect(workerMethods).not.toContain('isApiMethodBlocked');
+    expect(workerMethods).not.toContain('interceptApiCall');
+    expect(workerMethods).not.toContain('ApiGuard');
   });
 });

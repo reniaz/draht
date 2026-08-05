@@ -24,19 +24,32 @@ describe('GhostMode', () => {
     localStorage.clear();
   });
 
-  it('blocks all three by default when enabled', async () => {
+  it('blocks typing and every read path by default', async () => {
     const { api } = await bootWith({ GhostMode: { enabled: true } });
 
     expect(api.isApiMethodBlocked('sendMessageAction')).toBe(true);
+    // markMessageListRead is what runs when you open a chat — the one that matters.
+    expect(api.isApiMethodBlocked('markMessageListRead')).toBe(true);
     expect(api.isApiMethodBlocked('markMessagesRead')).toBe(true);
-    expect(api.isApiMethodBlocked('updateIsOnline')).toBe(true);
+    expect(api.isApiMethodBlocked('readAllMentions')).toBe(true);
+    expect(api.isApiMethodBlocked('readAllReactions')).toBe(true);
+  });
+
+  it('rewrites the online status to offline rather than dropping it', async () => {
+    const { api } = await bootWith({ GhostMode: { enabled: true } });
+
+    // Dropping the call would only make the client silent; Telegram infers presence from
+    // activity, so appearing offline means actively saying so.
+    expect(api.interceptApiCall('updateIsOnline', [true])).toEqual([false]);
+    expect(api.isApiMethodBlocked('updateIsOnline')).toBe(false);
   });
 
   it('blocks nothing when the plugin is disabled', async () => {
     const { api } = await bootWith({ GhostMode: { enabled: false } });
 
     expect(api.isApiMethodBlocked('sendMessageAction')).toBe(false);
-    expect(api.isApiMethodBlocked('updateIsOnline')).toBe(false);
+    expect(api.isApiMethodBlocked('markMessageListRead')).toBe(false);
+    expect(api.interceptApiCall('updateIsOnline', [true])).toEqual([true]);
   });
 
   it('honours each switch independently', async () => {
@@ -45,8 +58,8 @@ describe('GhostMode', () => {
     });
 
     expect(api.isApiMethodBlocked('sendMessageAction')).toBe(true);
-    expect(api.isApiMethodBlocked('markMessagesRead')).toBe(false);
-    expect(api.isApiMethodBlocked('updateIsOnline')).toBe(false);
+    expect(api.isApiMethodBlocked('markMessageListRead')).toBe(false);
+    expect(api.interceptApiCall('updateIsOnline', [true])).toEqual([true]);
   });
 
   it('never blocks anything it was not asked to', async () => {
@@ -64,8 +77,8 @@ describe('GhostMode', () => {
     stopPlugin(plugin);
 
     expect(api.isApiMethodBlocked('sendMessageAction')).toBe(false);
-    expect(api.isApiMethodBlocked('markMessagesRead')).toBe(false);
-    expect(api.isApiMethodBlocked('updateIsOnline')).toBe(false);
+    expect(api.isApiMethodBlocked('markMessageListRead')).toBe(false);
+    expect(api.interceptApiCall('updateIsOnline', [true])).toEqual([true]);
   });
 });
 

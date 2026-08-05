@@ -1,4 +1,6 @@
-import { blockApiMethod, unblockAllForOwner, unblockApiMethod } from '../../api/ApiGuard';
+import {
+  blockApiMethod, interceptApiMethod, unblockAllForOwner, unblockApiMethod,
+} from '../../api/ApiGuard';
 import { modLogger } from '../../api/Logger';
 import { definePluginSettings } from '../../api/Settings';
 import { definePlugin, OptionType } from '../../api/types';
@@ -6,18 +8,22 @@ import { definePlugin, OptionType } from '../../api/types';
 const logger = modLogger.scoped('GhostMode');
 const OWNER = 'GhostMode';
 
+/** Typing and recording indicators. */
+const TYPING_METHODS = ['sendMessageAction'];
+
 /**
- * Each switch maps to one outgoing API method.
+ * Every method that tells Telegram you have read something.
  *
- * Blocking happens at `callApi`, so the request never leaves the client — this is not a
- * UI-level fake. What it cannot do is retract information Telegram already has, or stop
- * other clients signed into the same account from reporting on your behalf.
+ * `markMessageListRead` is the one that matters most and is easy to miss: it is what runs
+ * when you simply open a chat, from three separate call sites. Blocking only
+ * `markMessagesRead` leaves read receipts working exactly as before.
  */
-const SWITCHES = {
-  hideTyping: 'sendMessageAction',
-  hideReadReceipts: 'markMessagesRead',
-  hideOnlineStatus: 'updateIsOnline',
-} as const;
+const READ_METHODS = [
+  'markMessageListRead',
+  'markMessagesRead',
+  'readAllMentions',
+  'readAllReactions',
+];
 
 const settings = definePluginSettings({
   hideTyping: {
@@ -31,15 +37,17 @@ const settings = definePluginSettings({
     type: OptionType.BOOLEAN,
     displayName: 'Hide read receipts',
     description:
-      'Do not tell anyone you read their message. Note that because the server is never '
-      + 'told either, those chats can come back as unread on your other devices.',
+      'Do not tell anyone you read their message. Because the server is never told '
+      + 'either, those chats can come back as unread on your other devices.',
     default: true,
     onChange: () => apply(),
   },
   hideOnlineStatus: {
     type: OptionType.BOOLEAN,
     displayName: 'Stay offline',
-    description: 'Never report yourself as online. You will appear last-seen a while ago.',
+    description:
+      'Report yourself as offline even while using Draht. Note this also stops Telegram '
+      + 'suppressing notifications on your phone, since it no longer knows you are here.',
     default: true,
     onChange: () => apply(),
   },
@@ -47,12 +55,24 @@ const settings = definePluginSettings({
 
 function apply() {
   try {
-    for (const [key, method] of Object.entries(SWITCHES)) {
-      if (settings.store[key as keyof typeof SWITCHES]) {
-        blockApiMethod(OWNER, method);
-      } else {
-        unblockApiMethod(OWNER, method);
-      }
+    for (const method of TYPING_METHODS) {
+      if (settings.store.hideTyping) blockApiMethod(OWNER, method);
+      else unblockApiMethod(OWNER, method);
+    }
+
+    for (const method of READ_METHODS) {
+      if (settings.store.hideReadReceipts) blockApiMethod(OWNER, method);
+      else unblockApiMethod(OWNER, method);
+    }
+
+    if (settings.store.hideOnlineStatus) {
+      // Rewritten rather than blocked. Dropping the call only makes the client silent,
+      // and Telegram then infers presence from account activity — which a client in
+      // active use produces constantly. Appearing offline requires actively saying so, so
+      // every "I am online" is turned into "I am offline".
+      interceptApiMethod(OWNER, 'updateIsOnline', () => [false]);
+    } else {
+      unblockApiMethod(OWNER, 'updateIsOnline');
     }
   } catch (err) {
     logger.error('failed to apply', err);
@@ -63,7 +83,7 @@ export default definePlugin({
   name: 'GhostMode',
   description:
     'Stop your client telling others when you are typing, reading or online. '
-    + 'Requests are dropped before they are sent, not hidden afterwards.',
+    + 'Requests are changed before they are sent, not hidden afterwards.',
   authors: ['Draht'],
   enabledByDefault: false,
 
@@ -75,7 +95,6 @@ export default definePlugin({
   },
 
   stop() {
-    // Clears every block this plugin owns, so nothing is left suppressed after disabling.
     unblockAllForOwner(OWNER);
   },
 });

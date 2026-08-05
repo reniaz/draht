@@ -27,7 +27,7 @@ const ALLOWLIST = {
   // The main-thread callApi, which is what the app actually calls. Note this is NOT
   // methods/init.ts — that one runs inside the GramJS worker, where a guard registered by
   // a main-thread plugin would never be seen.
-  'src/api/gramjs/worker/connector.ts': 8,
+  'src/api/gramjs/worker/connector.ts': 10,
   'src/components/middle/message/MessageContextMenu.tsx': 6,
   'src/hooks/useChatContextActions.ts': 6,
   // Single mount point for root-level mod UI; further modals nest inside ModRoot.
