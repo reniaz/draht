@@ -149,13 +149,24 @@ if (unpushed !== '0') {
   );
 }
 
-/* 5. A reused tag means the version was not bumped, and the updater keys off version. */
-const tags = run('git', ['tag', '--list', tag]);
-if (tags) {
+/*
+ * 5. A reused tag means the version was not bumped, and the updater keys off version.
+ *
+ * The remote is what decides that, not the local tag. A failed run — GitHub 500s on tag
+ * pushes occasionally — leaves a local tag behind, and treating that as "already
+ * released" would send you off bumping a version that was never published.
+ */
+const remoteTag = run('git', ['ls-remote', '--tags', 'origin', tag]);
+if (remoteTag) {
   die(
-    `Tag ${tag} already exists — version ${version} has been released.`,
+    `Tag ${tag} already exists on the remote — version ${version} has been released.`,
     'Bump "version" in package.json first.',
   );
+}
+
+const hasLocalTag = Boolean(run('git', ['tag', '--list', tag]));
+if (hasLocalTag) {
+  console.log(`Reusing local tag ${tag} left behind by an earlier failed run.\n`);
 }
 
 /* 6. Only now spend time on the build. */
@@ -176,7 +187,7 @@ console.log('\nChecking the app boots...\n');
 runLive('npm', ['run', 'mod:check:app']);
 
 console.log(`\nTagging ${tag}...\n`);
-run('git', ['tag', '-a', tag, '-m', `Draht ${version}`]);
+if (!hasLocalTag) run('git', ['tag', '-a', tag, '-m', `Draht ${version}`]);
 runLive('git', ['push', 'origin', tag]);
 
 /*
