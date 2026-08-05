@@ -50,6 +50,10 @@ void app.whenReady().then(async () => {
 
   const report = await win.webContents.executeJavaScript(`(() => {
     // A stand-in for the real column, so the rules can be measured where they apply.
+    // The layout override only applies while the bar is on screen, which the component
+    // signals with this class; the probe has to stand in for that too.
+    document.body.classList.add('draht-tabs-visible');
+
     const column = document.createElement('div');
     column.id = 'MiddleColumn';
     const bar = document.createElement('div');
@@ -83,6 +87,7 @@ void app.whenReady().then(async () => {
     };
 
     column.remove();
+    document.body.classList.remove('draht-tabs-visible');
     return result;
   })()`);
 

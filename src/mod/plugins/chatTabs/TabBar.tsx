@@ -67,7 +67,17 @@ const TabBar: FC<StateProps> = ({ currentChatId, currentThreadId, chats }) => {
     && tabs[0].chatId === currentChatId
     && String(tabs[0].threadId) === String(currentThreadId);
 
-  if (!tabs.length || isOnlyCurrent) return undefined;
+  const isVisible = Boolean(tabs.length) && !isOnlyCurrent;
+
+  // The class carries the column's layout change, so it is only present while the bar
+  // actually takes up space.
+  useEffect(() => {
+    document.body.classList.toggle('draht-tabs-visible', isVisible);
+
+    return () => document.body.classList.remove('draht-tabs-visible');
+  }, [isVisible]);
+
+  if (!isVisible) return undefined;
 
   return (
     <div className="draht-tabbar" dir={lang.isRtl ? 'rtl' : undefined}>

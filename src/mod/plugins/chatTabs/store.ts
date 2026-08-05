@@ -24,18 +24,36 @@ export function subscribe(listener: NoneToVoidFunction) {
   return () => listeners.delete(listener);
 }
 
-function notify() {
-  // A tab bar that only redraws when the global state happens to change would sit stale
-  // after an open or a close, so the store drives its own updates.
-  for (const listener of listeners) {
-    try {
-      listener();
-    } catch {
-      // One bad subscriber must not stop the others being told.
-    }
-  }
+let isNotifyScheduled = false;
 
-  save();
+/**
+ * Deferred out of the current task on purpose.
+ *
+ * `visitTab` runs inside an action handler, and subscribers here are Teact state setters.
+ * Setting state from inside a reducer re-renders the middle column in the middle of a
+ * global update — which lands on the message list while it is restoring scroll position,
+ * and leaves new messages sitting below the fold until something forces it to recompute.
+ * The same goes for the localStorage write: never synchronously inside a reducer.
+ *
+ * Coalesced, because several opens can land in one turn and the bar only needs the last.
+ */
+function notify() {
+  if (isNotifyScheduled) return;
+  isNotifyScheduled = true;
+
+  Promise.resolve().then(() => {
+    isNotifyScheduled = false;
+
+    for (const listener of listeners) {
+      try {
+        listener();
+      } catch {
+        // One bad subscriber must not stop the others being told.
+      }
+    }
+
+    save();
+  });
 }
 
 export function isSameTab(a: ChatTab, b: ChatTab) {

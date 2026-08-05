@@ -6,14 +6,17 @@
 // making it taller inflated the pill and pushed its contents out of place. Nothing about
 // the header needs to change: give the column a row above it and the header keeps the
 // geometry it was designed with.
-body.draht-has-tabs {
+// Scoped to the bar actually being on screen, not merely to the plugin running. Most of
+// the time there is no bar — one tab for the chat you are in does not earn one — and the
+// column should then be laid out exactly as upstream wrote it. Restyling the container
+// that owns the message list's scrolling is not something to do speculatively.
+body.draht-tabs-visible {
   #MiddleColumn {
     display: flex;
     flex-direction: column;
   }
 
-  #MiddleColumn > .messages-layout,
-  #MiddleColumn > .Transition {
+  #MiddleColumn > .messages-layout {
     // `height: 100%` would be 100% of the column including the bar, and overflow by
     // exactly the bar's height.
     flex: 1 1 auto;

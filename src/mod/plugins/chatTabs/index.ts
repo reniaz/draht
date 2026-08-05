@@ -24,8 +24,14 @@ const BODY_CLASS = 'draht-has-tabs';
  * directly, and would fire twice for the paths that go through both.
  */
 const handleOpenChat = ((global: unknown, actions: unknown, payload: any) => {
-  const { chatId, threadId } = payload || {};
-  if (chatId) visitTab({ chatId, threadId: threadId ?? -1 });
+  const { chatId, threadId, isOwnProfile } = payload || {};
+
+  // "My Profile" opens your own chat — which is Saved Messages — with a profile panel
+  // beside it. A tab can only record the chat, so returning to it later would drop you in
+  // Saved Messages with no profile. Better no tab than a tab that lies.
+  if (!chatId || isOwnProfile) return undefined;
+
+  visitTab({ chatId, threadId: threadId ?? -1 });
 
   return undefined;
 }) as never;
