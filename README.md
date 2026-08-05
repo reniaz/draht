@@ -33,12 +33,14 @@ still read what was said.
 ### Themes
 
 Recolour the entire client. Ships with **caelus** (warm, muted, dark), and you can build
-your own from ten colours in a picker — everything else is derived from those, so hover
+your own from eleven colours in a picker — everything else is derived from those, so hover
 states, tints and borders stay consistent automatically.
 
 - Built-in colour picker; no config files to hand-edit
 - Brightness dial for lightening any theme
-- Import any [Zed](https://zed.dev) editor theme as a starting point
+- Drop `.json` files into your themes folder and they appear in the list — the folder is
+  created on first run with a worked example inside
+- Includes a colour for deleted messages, so MessageLogger matches your theme
 
 ### HideSponsored
 
@@ -185,7 +187,7 @@ is a fork of it and wouldn't exist otherwise. Upstream's own README, including t
 dependency licence list, is preserved at [README.upstream.md](README.upstream.md).
 
 Plugin architecture inspired by [Vencord](https://github.com/Vendicated/Vencord). The
-bundled *caelus* theme is ported from the Zed theme of the same name by **dacctal**.
+bundled *caelus* palette is adapted from the colourscheme of the same name by **dacctal**.
 
 ## Licence
 

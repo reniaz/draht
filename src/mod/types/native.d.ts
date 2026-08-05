@@ -14,6 +14,9 @@ type DrahtNative = {
   installUpdate: () => void;
   focusWindow: () => void;
   flashWindow: () => void;
+  listThemes: () => Promise<{ file: string; content: string }[]>;
+  themesDir: () => Promise<string>;
+  openThemesFolder: () => void;
 };
 
 interface Window {

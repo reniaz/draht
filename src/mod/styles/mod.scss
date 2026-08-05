@@ -1,6 +1,11 @@
 /**
  * Deleted-message styling.
  *
+ * Colours come from `--draht-deleted`, which the Themes plugin sets, falling back to
+ * Telegram's `--color-error` when no theme is active. A separate variable rather than
+ * reusing the error colour, so a theme can make "this was deleted" read differently from
+ * "something went wrong".
+ *
  * Two mechanisms are needed, and it is worth knowing why.
  *
  * Vencord's MessageLogger recolours purely by shadowing Discord's design tokens inside
@@ -19,13 +24,13 @@
 
 .Message.draht-deleted {
   // (1) For descendants that read the tokens.
-  --color-text: var(--color-error);
-  --color-text-secondary: var(--color-error);
-  --color-text-meta: var(--color-error);
-  --color-text-meta-rgb: var(--color-error-rgb);
-  --color-text-meta-colored: var(--color-error);
-  --color-links: var(--color-error);
-  --color-composer-button: var(--color-error);
+  --color-text: var(--draht-deleted, var(--color-error));
+  --color-text-secondary: var(--draht-deleted, var(--color-error));
+  --color-text-meta: var(--draht-deleted, var(--color-error));
+  --color-text-meta-rgb: var(--draht-deleted-rgb, var(--color-error-rgb));
+  --color-text-meta-colored: var(--draht-deleted, var(--color-error));
+  --color-links: var(--draht-deleted, var(--color-error));
+  --color-composer-button: var(--draht-deleted, var(--color-error));
 
   // (2) For everything that inherits from body. `!important` and the descendant wildcard
   // are deliberate: the goal is an unambiguous "this message is gone" signal, and the
@@ -33,7 +38,7 @@
   // re-checking that list on every upstream change.
   .message-content,
   .message-content *:not(svg):not(svg *) {
-    color: var(--color-error) !important;
+    color: var(--draht-deleted, var(--color-error)) !important;
   }
 
   // Media is kept but visibly inert, with a hover reveal so it stays readable.
@@ -60,7 +65,7 @@
 
 body.draht-delete-style-overlay .Message.draht-deleted {
   .message-content {
-    background-color: rgba(var(--color-error-rgb), 0.12) !important;
+    background-color: rgba(var(--draht-deleted-rgb, var(--color-error-rgb)), 0.12) !important;
   }
 }
 

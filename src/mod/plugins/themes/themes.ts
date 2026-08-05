@@ -1,8 +1,8 @@
 /**
- * A theme is defined by ten semantic colours, not by the ~50 CSS variables Telegram
- * actually reads.
+ * A theme is defined by a handful of semantic colours, not by the ~50 CSS variables
+ * Telegram actually reads.
  *
- * Everything else is derived. That is what makes a colour picker usable — editing ten
+ * Everything else is derived. That is what makes a colour picker usable — editing eleven
  * swatches is a reasonable thing to ask of someone, editing fifty is not — and it keeps
  * derived relationships (hover states, tints, rgb companions) internally consistent
  * instead of leaving the user to keep them in sync by hand.
@@ -26,6 +26,9 @@ export type ThemeSeed = {
   link: string;
   error: string;
   success: string;
+  /** Deleted messages kept by MessageLogger. Distinct from `error` so a theme can make
+   *  "this was deleted" read differently from "something went wrong". */
+  deleted: string;
 };
 
 export type ModTheme = {
@@ -95,6 +98,7 @@ export function buildThemeVars(seed: ThemeSeed, brightness = 0): Record<string, 
   const link = lift(seed.link);
   const error = lift(seed.error);
   const success = lift(seed.success);
+  const deleted = lift(seed.deleted ?? seed.error);
 
   // Derived steps, so hover/active states stay consistent with whatever the user picked.
   const surfaceHover = mix(surface, text, 0.06);
@@ -187,6 +191,11 @@ export function buildThemeVars(seed: ThemeSeed, brightness = 0): Record<string, 
     '--color-voice-transcribe-button': subtle,
     '--color-voice-transcribe-button-own': raisedHover,
 
+    // MessageLogger. Namespaced rather than overriding a Telegram variable, since nothing
+    // upstream has a concept of a deleted-but-still-visible message.
+    '--draht-deleted': deleted,
+    '--draht-deleted-rgb': triplet(deleted),
+
     // Shadows
     '--color-default-shadow': rgba('#000000', 0.5),
     '--color-light-shadow': rgba('#000000', 0.22),
@@ -196,11 +205,11 @@ export function buildThemeVars(seed: ThemeSeed, brightness = 0): Record<string, 
 /* ---------- bundled themes ---------- */
 
 /**
- * caelus, ported from the Zed theme by dacctal.
+ * caelus — warm, muted, dark. Adapted from the palette of the same name by dacctal.
  *
- * Lifted a step from the source palette: an editor theme is tuned for a mostly-static
- * page of text, and the same values in a chat client — which is denser, with more
- * chrome — read as murkier than intended.
+ * Lifted a step from the original: those values were tuned for a mostly-static page of
+ * text, and in a chat client — denser, with far more chrome — they read as murkier than
+ * intended.
  */
 const CAELUS: ThemeSeed = {
   background: '#262726',
@@ -213,6 +222,7 @@ const CAELUS: ThemeSeed = {
   link: '#c47a42',
   error: '#c05f5a',
   success: '#6aa76c',
+  deleted: '#c05f5a',
 };
 
 export const DEFAULT_SEED = CAELUS;
@@ -236,4 +246,5 @@ export const SEED_LABELS: Record<keyof ThemeSeed, string> = {
   link: 'Links',
   error: 'Errors',
   success: 'Success',
+  deleted: 'Deleted messages',
 };

@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import { startWebServer, type WebServer } from './server';
+import { initThemes } from './themes';
 import { initUpdater } from './updater';
 import { initWindowControls } from './windowControls';
 
@@ -149,6 +150,7 @@ if (!app.requestSingleInstanceLock()) {
       ? BrowserWindow.getAllWindows()[0]
       : mainWindow);
 
+    initThemes();
     initUpdater(currentWindow);
     initWindowControls(currentWindow);
 

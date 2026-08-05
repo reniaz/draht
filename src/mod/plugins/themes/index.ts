@@ -1,23 +1,63 @@
-import type { ThemeSeed } from './themes';
+import type { ModTheme, ThemeSeed } from './themes';
 
 import { modLogger } from '../../api/Logger';
 import { definePluginSettings } from '../../api/Settings';
 import { definePlugin, OptionType } from '../../api/types';
-import { buildThemeVars, DEFAULT_SEED, getTheme, THEMES } from './themes';
+import { buildThemeVars, DEFAULT_SEED, THEMES } from './themes';
+import { parseThemeFile } from './themeFile';
 import ThemeEditor from './ThemeEditor';
 
 const logger = modLogger.scoped('Themes');
 
+const STYLE_ELEMENT_ID = 'draht-theme';
+
+/** Themes loaded from the user's themes folder, refreshed at startup. */
+let fileThemes: ModTheme[] = [];
+
+export function getAvailableThemes(): ModTheme[] {
+  return [...THEMES, ...fileThemes];
+}
+
+export function findTheme(id: string) {
+  return getAvailableThemes().find((theme) => theme.id === id);
+}
+
+/**
+ * Reads every JSON file in the themes folder.
+ *
+ * One bad file must not hide the others, so failures are logged per file and skipped
+ * rather than aborting the whole load.
+ */
+export async function loadFileThemes() {
+  const native = window.draht;
+  if (!native?.listThemes) return;
+
+  try {
+    const files = await native.listThemes();
+
+    fileThemes = files.flatMap(({ file, content }) => {
+      const id = `file:${file}`;
+      try {
+        return [parseThemeFile(content, id)];
+      } catch (err) {
+        logger.error(`could not read theme '${file}': ${err instanceof Error ? err.message : err}`);
+        return [];
+      }
+    });
+
+    if (fileThemes.length) logger.info(`loaded ${fileThemes.length} theme file(s)`);
+  } catch (err) {
+    logger.error('could not list themes', err);
+  }
+}
+
 const settings = definePluginSettings({
+  // Held as a plain value and driven by the editor, because the list is dynamic — it
+  // grows with whatever is in the themes folder, which a fixed SELECT cannot express.
   theme: {
-    type: OptionType.SELECT,
-    description: 'Colourscheme applied on top of Telegram\'s own theme',
-    options: [
-      { label: 'Off', value: 'off', default: true },
-      ...THEMES.map((theme) => ({ label: theme.label, value: theme.id })),
-      { label: 'Custom', value: 'custom' },
-    ],
-    onChange: () => apply(),
+    type: OptionType.CUSTOM,
+    description: 'Selected theme',
+    default: 'off',
   },
   brightness: {
     type: OptionType.SLIDER,
@@ -30,36 +70,22 @@ const settings = definePluginSettings({
     unit: '%',
     onChange: () => apply(),
   },
-  customSeed: {
+  picker: {
     type: OptionType.COMPONENT,
-    description: 'Custom colours',
-    displayName: 'Custom colours',
+    description: 'Theme',
+    displayName: 'Theme',
     component: ThemeEditor,
-    hidden() {
-      return this.store.theme !== 'custom';
-    },
+  },
+  customSeed: {
+    type: OptionType.CUSTOM,
+    description: 'Colours for the custom theme',
   },
 });
-
-const STYLE_ELEMENT_ID = 'draht-theme';
 
 function clear() {
   document.getElementById(STYLE_ELEMENT_ID)?.remove();
 }
 
-/**
- * Applies the palette as an injected stylesheet with `!important`.
- *
- * The obvious approach — `documentElement.style.setProperty` — loses. telegram-tt writes
- * its own theme colours as inline styles on `<html>` during startup, *after* the mod
- * initialises (the mod deliberately loads first so plugins can register action handlers
- * ahead of upstream's). Our values were simply overwritten, which is why a theme only
- * appeared after toggling the plugin off and on: that re-applied it late enough to win.
- *
- * Racing to run last would be fragile. Instead this sidesteps ordering entirely: per the
- * CSS cascade an `!important` declaration in a stylesheet beats a *normal* inline style,
- * so it does not matter when upstream writes its own values or how often.
- */
 function applySeed(seed: ThemeSeed) {
   const vars = buildThemeVars(seed, (Number(settings.store.brightness) || 0) / 100);
 
@@ -74,12 +100,15 @@ function applySeed(seed: ThemeSeed) {
     document.head.appendChild(element);
   }
 
+  // `!important` in a stylesheet beats a normal inline style, which is what telegram-tt
+  // writes on <html> during startup — after the mod initialises. Without this the theme
+  // is applied and then silently overwritten on every cold start.
   element.textContent = `:root {\n${declarations}\n}`;
 }
 
-function apply() {
+export function apply() {
   try {
-    const selected = settings.store.theme;
+    const selected = settings.store.theme || 'off';
 
     if (selected === 'off') {
       clear();
@@ -97,8 +126,9 @@ function apply() {
       return;
     }
 
-    const theme = getTheme(selected);
+    const theme = findTheme(selected);
     if (theme) applySeed(theme.seed);
+    else clear();
   } catch (err) {
     logger.error('failed to apply theme', err);
   }
@@ -107,15 +137,18 @@ function apply() {
 export default definePlugin({
   name: 'Themes',
   description:
-    'Custom colourschemes. Ships with caelus, or pick your own colours. '
-    + 'Works best with Telegram\'s Dark theme (Settings > General).',
+    'Custom colourschemes. Ships with caelus, accepts theme files from your themes '
+    + 'folder, or pick your own colours. Works best with Telegram\'s Dark theme.',
   authors: ['Draht'],
   enabledByDefault: false,
 
   settings,
 
   start() {
+    // Applied immediately from the saved id so there is no flash of the default palette,
+    // then again once the folder has been read, in case the saved theme lives there.
     apply();
+    void loadFileThemes().then(apply);
   },
 
   stop() {

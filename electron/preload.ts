@@ -45,4 +45,17 @@ contextBridge.exposeInMainWorld('draht', {
   flashWindow() {
     ipcRenderer.send('draht:flash-window');
   },
+
+  /** Theme files the user has dropped into the themes folder. */
+  listThemes(): Promise<{ file: string; content: string }[]> {
+    return ipcRenderer.invoke('draht:list-themes');
+  },
+
+  themesDir(): Promise<string> {
+    return ipcRenderer.invoke('draht:themes-dir');
+  },
+
+  openThemesFolder() {
+    ipcRenderer.send('draht:open-themes-folder');
+  },
 });

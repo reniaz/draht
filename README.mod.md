@@ -10,7 +10,10 @@ A Telegram client with a plugin system — a fork of [telegram-tt](https://githu
 | Plugin | |
 |---|---|
 | **MessageLogger** | Keeps deleted messages visible instead of letting them disappear, and records the previous versions of edited messages. Deleted messages can be purged manually, per message or per chat. |
-| **Themes** | Custom colourschemes, applied over Telegram's own palette. Ships with *caelus*; any palette can be built from ten colours in a picker, or imported from a Zed theme. |
+| **Themes** | Custom colourschemes, applied over Telegram's own palette. Ships with *caelus*; a palette is eleven colours, editable in a picker or written as a JSON file in the themes folder. |
+| **GhostMode** | Drops typing indicators and read receipts before they are sent, and reports you as offline. |
+| **DesktopNotifications** | Makes notifications work in Electron at all, plus click-to-open and taskbar flash. |
+| **Fonts** | Any font installed on the system, with per-area toggles. |
 | **HideSponsored** | Hides sponsored messages (ads) in channels. |
 
 Settings → **Plugins**.
@@ -152,8 +155,8 @@ registering your own `api_id` is the supported path.
   in place. Re-injecting them into the message list across restarts requires rebuilding
   `listedIds`/`viewportIds` in the right order, which fails by silently rendering nothing;
   the per-chat *Deleted messages* viewer always works.
-- **Media on deleted messages doesn't survive a restart.** The blobs live in Telegram's
-  own cache, aren't copied into the log, and the server has deleted the originals.
+- **Only media you already loaded can be kept.** Blobs are copied out of Telegram's cache
+  when a message is deleted, so a photo that never rendered was never there to copy.
 - **Persistence is off by default when a Telegram passcode is set.** Telegram encrypts its
   own cache behind the passcode; this log sits outside that, so persisting would leave
   deleted messages readable on disk. Opt in under the plugin's settings if you want it.
