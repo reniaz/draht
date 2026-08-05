@@ -167,12 +167,25 @@ if (unpushed !== '0') {
  * pushes occasionally — leaves a local tag behind, and treating that as "already
  * released" would send you off bumping a version that was never published.
  */
+/*
+ * Nor is a remote tag proof on its own. The tag is pushed and the release created before
+ * the installer is built, so a build that fails — a file lock on `release/`, which Windows
+ * produces readily — leaves both behind with nothing attached. That is an interrupted run
+ * to be finished, not a released version, and the assets are what tell the two apart.
+ */
 const remoteTag = run('git', ['ls-remote', '--tags', 'origin', tag]);
 if (remoteTag) {
-  die(
-    `Tag ${tag} already exists on the remote — version ${version} has been released.`,
-    'Bump "version" in package.json first.',
-  );
+  const existing = await gh(`/releases/tags/${tag}`);
+  const assets = existing.ok ? (await existing.json()).assets ?? [] : [];
+
+  if (assets.length) {
+    die(
+      `Tag ${tag} already exists on the remote — version ${version} has been released.`,
+      'Bump "version" in package.json first.',
+    );
+  }
+
+  console.log(`Tag ${tag} is on the remote but its release is empty; finishing that run.\n`);
 }
 
 const hasLocalTag = Boolean(run('git', ['tag', '--list', tag]));
@@ -199,7 +212,8 @@ runLive('npm', ['run', 'mod:check:app']);
 
 console.log(`\nTagging ${tag}...\n`);
 if (!hasLocalTag) run('git', ['tag', '-a', tag, '-m', `Draht ${version}`]);
-runLive('git', ['push', 'origin', tag]);
+// Already there when finishing an interrupted run, and pushing it again is rejected.
+if (!remoteTag) runLive('git', ['push', 'origin', tag]);
 
 /*
  * 7. Create the GitHub release before electron-builder uploads anything.
