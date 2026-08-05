@@ -30,7 +30,13 @@ void app.whenReady().then(async () => {
 
   const win = new BrowserWindow({
     show: false,
-    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      // Needed so the update modal can receive its IPC message below.
+      preload: join(__dirname, 'preload.cjs'),
+    },
   });
 
   const logs: string[] = [];
@@ -92,6 +98,28 @@ void app.whenReady().then(async () => {
   } else {
     console.log('\n(no Draht console output at all — the mod may not have run)');
   }
+
+  // Does the in-app update prompt actually pick up the active theme, rather than looking
+  // like the OS dialog it replaced?
+  win.webContents.send('draht:update-ready', { version: '9.9.9' });
+  await new Promise((r) => { setTimeout(r, 1500); });
+
+  const modal = await win.webContents.executeJavaScript(`(() => {
+    const root = document.querySelector('.draht-update-modal');
+    if (!root) return { rendered: false };
+    const dialog = root.querySelector('.modal-dialog') || root;
+    const text = root.querySelector('.draht-update-text');
+    return {
+      rendered: true,
+      dialogBackground: getComputedStyle(dialog).backgroundColor,
+      textColour: text ? getComputedStyle(text).color : '(no text node)',
+      themeBackground: getComputedStyle(document.documentElement)
+        .getPropertyValue('--color-background').trim(),
+    };
+  })()`);
+
+  console.log('\n--- update modal theming ---');
+  console.log(JSON.stringify(modal, undefined, 2));
 
   console.log('');
   app.exit(0);
