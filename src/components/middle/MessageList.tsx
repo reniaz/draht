@@ -102,6 +102,9 @@ import NoMessages from './NoMessages';
 import RequirementToContactMessage from './RequirementToContactMessage';
 
 import './MessageList.scss';
+// #region mod
+import { runForceScrollToBottom } from '../../mod/api/Seams';
+// #endregion mod
 
 type OwnProps = {
   chatId: string;
@@ -969,7 +972,8 @@ const MessageList = ({
       )) {
         // Break out of `forceLayout`
         requestMeasure(() => {
-          const isScrollToBottom = !isBackgroundModeActive() || !firstUnreadElement;
+          const isScrollToBottom = runForceScrollToBottom()
+            || !isBackgroundModeActive() || !firstUnreadElement;
           const topReserve = getMessageListTopReserve(container);
           const isFewMessagesScroll = container.parentElement?.classList.contains(FORCE_MESSAGES_SCROLL_CLASS);
           const maxDistance = isFewMessagesScroll && isScrollToBottom

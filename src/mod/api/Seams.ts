@@ -72,6 +72,16 @@ export type OpenChatInNewTab = (chatId: string, threadId: ThreadId) => boolean;
  */
 export type OpenOwnProfile = () => boolean;
 
+/**
+ * Whether an incoming message should always scroll the list to the bottom.
+ *
+ * Upstream scrolls to the first unread message instead when the window is in the
+ * background. That is right when the unread marker is accurate, and wrong here: hiding
+ * read receipts means the marker never clears, so a chat you have read parks itself on an
+ * old message every time something arrives while you are looking elsewhere.
+ */
+export type ForceScrollToBottom = () => boolean;
+
 type SeamRegistry = {
   beforeDeleteMessages: BeforeDeleteMessages[];
   messageClassNames: MessageClassNames[];
@@ -79,6 +89,7 @@ type SeamRegistry = {
   chatMenuItems: ChatMenuItems[];
   openChatInNewTab: OpenChatInNewTab[];
   openOwnProfile: OpenOwnProfile[];
+  forceScrollToBottom: ForceScrollToBottom[];
 };
 
 const seams: SeamRegistry = {
@@ -88,6 +99,7 @@ const seams: SeamRegistry = {
   chatMenuItems: [],
   openChatInNewTab: [],
   openOwnProfile: [],
+  forceScrollToBottom: [],
 };
 
 export function addSeam<K extends keyof SeamRegistry>(name: K, fn: SeamRegistry[K][number]) {
@@ -240,6 +252,24 @@ export function runOpenOwnProfile(): boolean {
       if (handler()) return true;
     } catch (err) {
       modLogger.error('openOwnProfile seam failed', err);
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Called for each incoming message, deciding whether the list follows it to the bottom.
+ *
+ * Kept to a plain boolean and no arguments: this runs on the message-list hot path, and
+ * with no handlers attached it is one empty-array check.
+ */
+export function runForceScrollToBottom(): boolean {
+  for (const handler of seams.forceScrollToBottom) {
+    try {
+      if (handler()) return true;
+    } catch (err) {
+      modLogger.error('forceScrollToBottom seam failed', err);
     }
   }
 

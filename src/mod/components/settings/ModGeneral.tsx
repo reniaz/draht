@@ -38,9 +38,9 @@ const ModGeneral: FC = () => {
       <div className="draht-setting draht-setting-boolean">
         <Checkbox
           label="Open chats at the newest message"
-          subLabel={'Jump straight to the bottom instead of the oldest unread message. '
-            + 'Useful with hidden read receipts, where the server keeps believing you '
-            + 'have not read anything.'}
+          subLabel={'Open at the bottom, and follow new messages there instead of '
+            + 'jumping back to the oldest unread one. Needed with hidden read receipts, '
+            + 'where the server keeps believing you have not read anything.'}
           checked={isPluginEnabled('OpenAtNewest')}
           onChange={(e) => toggle('OpenAtNewest', e.currentTarget.checked)}
         />

@@ -1,6 +1,7 @@
 import { getActions } from '../../../global';
 
 import { attachAction, detachAction } from '../../api/ActionBus';
+import { addSeam, removeSeam } from '../../api/Seams';
 import { definePlugin } from '../../api/types';
 
 /**
@@ -39,9 +40,23 @@ const handleOpen = ((global: unknown, actions: unknown, payload: any) => {
   return undefined;
 }) as never;
 
+/**
+ * Keeps the list following incoming messages.
+ *
+ * Opening at the newest message is only half of it. Upstream scrolls an arriving message
+ * to the *first unread* rather than the bottom whenever the window is in the background —
+ * right when the unread marker is accurate, wrong once read receipts are hidden and it
+ * never clears. The visible result is a chat you had read parking itself on an old message
+ * whenever something arrives while you are looking elsewhere, and staying there until you
+ * press "jump to latest".
+ */
+const alwaysScrollToBottom = () => true;
+
 export default definePlugin({
   name: 'OpenAtNewest',
-  description: 'Open every chat at its newest message instead of its oldest unread one.',
+  description:
+    'Open every chat at its newest message, and keep following new ones, instead of '
+    + 'anchoring to the oldest unread message.',
   authors: ['Draht'],
   enabledByDefault: true,
   // Client behaviour, so it lives under Draht Settings -> General.
@@ -49,11 +64,13 @@ export default definePlugin({
 
   start() {
     attachAction('processOpenChatOrThread', handleOpen);
+    addSeam('forceScrollToBottom', alwaysScrollToBottom);
   },
 
   stop() {
     if (timer) self.clearTimeout(timer);
     timer = undefined;
     detachAction('processOpenChatOrThread', handleOpen);
+    removeSeam('forceScrollToBottom', alwaysScrollToBottom);
   },
 });

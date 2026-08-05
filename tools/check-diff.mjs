@@ -22,6 +22,10 @@ const ALLOWLIST = {
   'src/index.tsx': 3,
   'src/global/actions/apiUpdaters/messages.ts': 10,
   'src/components/middle/message/Message.tsx': 6,
+
+  // Keeps the list following new messages when the unread marker is stale, which it
+  // permanently is once read receipts are hidden.
+  'src/components/middle/MessageList.tsx': 8,
   // Every title update funnels through setPageTitleInstant, so one call covers them all.
   'src/util/updatePageTitle.ts': 8,
   // The main-thread callApi, which is what the app actually calls. Note this is NOT
