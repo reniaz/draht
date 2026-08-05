@@ -19,7 +19,25 @@ const STORAGE_KEY = 'draht-local-read';
  * through, without any of it leaving the machine. It is the same shape as the message log:
  * a local record that is re-applied when upstream state contradicts it.
  */
+/**
+ * How many threads to remember.
+ *
+ * An entry is a key and a number — around 30 bytes — so this is roughly 15 KB, against a
+ * localStorage budget of several megabytes. The cap exists because the set would otherwise
+ * only ever grow: every chat opened and every forum topic visited adds one, for as long as
+ * the client is installed.
+ *
+ * Eviction is least-recently-read, which is the right thing to lose: a chat you have not
+ * opened in five hundred chats' time re-reads from the server's mark, and the worst case
+ * is one stale unread badge on a conversation you had forgotten about.
+ */
+const MAX_MARKS = 500;
+
+/** Longest a mark can sit unsaved. Reads fire on scroll; the writes should not. */
+const SAVE_THROTTLE_MS = 2000;
+
 let marks: Record<string, number> = {};
+let saveTimer: number | undefined;
 
 function keyOf(chatId: string, threadId: ThreadId) {
   return `${chatId}:${threadId}`;
@@ -31,7 +49,12 @@ export function getMarks() {
 
 export function clearMarks() {
   marks = {};
-  save();
+
+  // Written straight away rather than through the throttle: clearing is not on any hot
+  // path, and leaving a pending timer holding the throttle open would swallow the next
+  // few writes.
+  if (saveTimer) self.clearTimeout(saveTimer);
+  saveNow();
 }
 
 /** @returns true when this is further than anything recorded before. */
@@ -43,7 +66,16 @@ export function recordRead(chatId: string, threadId: ThreadId, maxId: number): b
   // search result — must not undo what has already been read.
   if ((marks[key] ?? 0) >= maxId) return false;
 
+  // Re-inserted rather than assigned, so the object's key order is least-recently-read
+  // first — which is what makes the eviction below correct without storing timestamps.
+  delete marks[key];
   marks[key] = maxId;
+
+  const keys = Object.keys(marks);
+  if (keys.length > MAX_MARKS) {
+    for (const stale of keys.slice(0, keys.length - MAX_MARKS)) delete marks[stale];
+  }
+
   save();
 
   return true;
@@ -73,7 +105,9 @@ export function applyMarks<T extends GlobalState>(global: T): T {
   return global;
 }
 
-function save() {
+function saveNow() {
+  saveTimer = undefined;
+
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(marks));
   } catch {
@@ -81,7 +115,36 @@ function save() {
   }
 }
 
+/**
+ * Throttled, because `markMessageListRead` fires as you scroll and `localStorage.setItem`
+ * is synchronous — writing on every one would put a serialise-and-write on the scroll
+ * path. The flush on hide covers closing the window before the timer runs.
+ */
+function save() {
+  if (saveTimer) return;
+
+  saveTimer = self.setTimeout(saveNow, SAVE_THROTTLE_MS);
+}
+
+let isFlushBound = false;
+
+function bindFlush() {
+  if (isFlushBound) return;
+  isFlushBound = true;
+
+  // `visibilitychange` rather than `beforeunload`: the latter is unreliable, and this also
+  // catches the window merely being hidden.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && saveTimer) {
+      self.clearTimeout(saveTimer);
+      saveNow();
+    }
+  });
+}
+
 export function restoreMarks() {
+  bindFlush();
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return;
