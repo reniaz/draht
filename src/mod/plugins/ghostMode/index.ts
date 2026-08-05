@@ -1,7 +1,10 @@
 import { callApi } from '../../../api/gramjs';
+import { setGlobal } from '../../../global';
 import { selectCurrentMessageList } from '../../../global/selectors';
 
-import { attachAction, detachAction } from '../../api/ActionBus';
+import {
+  attachAction, attachGlobalChange, detachAction, detachGlobalChange,
+} from '../../api/ActionBus';
 import {
   blockApiMethod, interceptApiMethod, unblockAllForOwner, unblockApiMethod,
 } from '../../api/ApiGuard';
@@ -188,24 +191,44 @@ const handleMarkMessagesRead = ((global: any, actions: any, payload: any) => {
   return undefined;
 }) as never;
 
+let isReconciling = false;
+
 /**
- * Re-applies the marks as a chat opens.
+ * Re-applies the marks whenever the state moves.
  *
- * This is the moment that matters: the message list picks where to open from the first
- * unread id, so a stale one is what sends you to the top of a chat you have already read.
+ * Applying them as the chat opens is not enough, and was the reason the first attempt did
+ * nothing at all: `updateThreadReadState` returns the state untouched when the thread does
+ * not exist yet, and on the first open of a chat it does not. The data arrives afterwards,
+ * carrying the server's answer — that this is all unread — so the mark has to be re-applied
+ * after each of those arrivals rather than once at the start.
+ *
+ * This converges rather than looping: applying a mark makes the state no longer behind it,
+ * so the next pass finds nothing to do and no further update is dispatched.
  */
-const handleOpen = ((global: any) => applyMarks(global)) as never;
+function reconcile(global: any) {
+  if (isReconciling) return;
+
+  const next = applyMarks(global);
+  if (next === global) return;
+
+  isReconciling = true;
+  try {
+    setGlobal(next);
+  } finally {
+    isReconciling = false;
+  }
+}
 
 function attachLocalRead() {
   attachAction('markMessageListRead', handleMarkListRead);
   attachAction('markMessagesRead', handleMarkMessagesRead);
-  attachAction('processOpenChatOrThread', handleOpen);
+  attachGlobalChange(reconcile);
 }
 
 function detachLocalRead() {
   detachAction('markMessageListRead', handleMarkListRead);
   detachAction('markMessagesRead', handleMarkMessagesRead);
-  detachAction('processOpenChatOrThread', handleOpen);
+  detachGlobalChange(reconcile);
 }
 
 function apply() {

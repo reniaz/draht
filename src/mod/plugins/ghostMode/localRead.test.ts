@@ -106,3 +106,56 @@ describe('local read marks', () => {
     expect(get()['-1001234567890:-1']).toBe(42);
   });
 });
+
+describe('applying marks to state', () => {
+  beforeEach(() => {
+    clearMarks();
+  });
+
+  function stateWith(lastRead: number, unreadCount: number) {
+    return {
+      messages: {
+        byChatId: {
+          '123': {
+            byId: {},
+            threadsById: {
+              '-1': { readState: { lastReadInboxMessageId: lastRead, unreadCount } },
+            },
+          },
+        },
+      },
+    } as any;
+  }
+
+  it('moves the read state up to the mark', async () => {
+    const { applyMarks } = await import('./localRead');
+    recordRead('123', -1, 900);
+
+    const next = applyMarks(stateWith(100, 12));
+    const readState = next.messages.byChatId['123'].threadsById['-1'].readState;
+
+    expect(readState.lastReadInboxMessageId).toBe(900);
+    expect(readState.unreadCount).toBe(0);
+  });
+
+  it('leaves state alone when it is already ahead', async () => {
+    const { applyMarks } = await import('./localRead');
+    recordRead('123', -1, 100);
+
+    const global = stateWith(900, 0);
+
+    // Same object back, so the reconciler does not dispatch an update on every change.
+    expect(applyMarks(global)).toBe(global);
+  });
+
+  it('does nothing for a thread that has not loaded yet', async () => {
+    const { applyMarks } = await import('./localRead');
+    recordRead('456', -1, 900);
+
+    const global = stateWith(100, 12);
+
+    // The reducer ignores writes to a thread that does not exist, so this must report no
+    // change — otherwise the reconciler would dispatch forever without ever succeeding.
+    expect(applyMarks(global)).toBe(global);
+  });
+});
