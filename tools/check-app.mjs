@@ -16,9 +16,23 @@
  */
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { connect } from 'node:net';
+import { connect, createServer } from 'node:net';
 
-const PORT = 48764;
+/**
+ * A free ephemeral port, passed to the app via DRAHT_PORT.
+ *
+ * The app's real port is fixed (the origin has to stay stable for IndexedDB), but using
+ * it here would make this check unrunnable whenever Draht is open — and refusing to run
+ * is not much better than a false pass.
+ */
+const PORT = await new Promise((resolve, reject) => {
+  const probe = createServer();
+  probe.on('error', reject);
+  probe.listen(0, '127.0.0.1', () => {
+    const { port } = probe.address();
+    probe.close(() => resolve(port));
+  });
+});
 const TIMEOUT_MS = 45_000;
 const ENTRY = 'electron/dist/main.cjs';
 
@@ -41,19 +55,12 @@ function isListening() {
   });
 }
 
-if (await isListening()) {
-  console.error(
-    `\n  Port ${PORT} is already in use, so this check cannot tell whether the app `
-    + 'started.\n  Close any running Draht instance and retry.\n',
-  );
-  process.exit(1);
-}
-
-console.log('Launching the built app...');
+console.log(`Launching the built app on port ${PORT}...`);
 
 const child = spawn('npx', ['electron', ENTRY], {
   stdio: ['ignore', 'pipe', 'pipe'],
   shell: process.platform === 'win32',
+  env: { ...process.env, DRAHT_PORT: String(PORT) },
 });
 
 let output = '';
@@ -82,4 +89,4 @@ if (!booted || fatal) {
   process.exit(1);
 }
 
-console.log(`  OK: main process booted and is serving on ${PORT}.`);
+console.log('  OK: main process booted and is serving.');

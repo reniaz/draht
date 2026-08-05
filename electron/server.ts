@@ -26,7 +26,14 @@ import { extname, join, normalize, sep } from 'node:path';
  *    unguessable prefix prevents that, and paths outside it are served as plain-text
  *    404s so no script can execute on this origin.
  */
-const PORT = 48764;
+/**
+ * Fixed, because the origin is scheme+host+port and IndexedDB is scoped to the origin.
+ *
+ * `DRAHT_PORT` overrides it for the boot check only (tools/check-app.mjs), so verifying a
+ * build does not collide with a running instance. Do not set it for normal use: a
+ * different port is a different origin, which orphans the session and the message log.
+ */
+const PORT = Number(process.env.DRAHT_PORT) || 48764;
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
