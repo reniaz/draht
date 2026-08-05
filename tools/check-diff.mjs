@@ -36,6 +36,8 @@ const ALLOWLIST = {
   // Config files, not seam call sites — the tight budget is about keeping *code* edits
   // surgical, and does not buy anything here.
   'package.json': 40,
+  // Must track package.json's version; upstream's own update checker compares them.
+  'public/version.txt': 4,
   '.gitignore': 10,
   // Plugin registration, the @mod alias, and the outDir redirect that keeps builds out
   // of upstream's tracked `dist/`.

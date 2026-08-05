@@ -46,7 +46,24 @@ if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
   );
 }
 
-/* 2. Uncommitted work would not be in the tag. */
+/*
+ * 2. public/version.txt must match.
+ *
+ * telegram-tt has its own update checker that fetches version.txt and compares it to the
+ * compiled-in version with `remote !== app`. If they drift, every client shows a
+ * permanent "update available" prompt that reloading never clears — and it fights the
+ * real electron-updater.
+ */
+const versionTxt = readFileSync('public/version.txt', 'utf8').trim();
+if (versionTxt !== version) {
+  die(
+    `public/version.txt says ${versionTxt}, package.json says ${version}.`,
+    'They must match, or upstream\'s update checker shows a prompt that never clears:\n'
+    + `    echo ${version}> public/version.txt`,
+  );
+}
+
+/* 3. Uncommitted work would not be in the tag. */
 const dirty = run('git', ['status', '--porcelain']);
 if (dirty) {
   die(
@@ -55,7 +72,7 @@ if (dirty) {
   );
 }
 
-/* 3. The tag must point at a commit others can actually fetch. */
+/* 4. The tag must point at a commit others can actually fetch. */
 const branch = run('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
 let unpushed;
 try {
@@ -71,7 +88,7 @@ if (unpushed !== '0') {
   );
 }
 
-/* 4. A reused tag means the version was not bumped, and the updater keys off version. */
+/* 5. A reused tag means the version was not bumped, and the updater keys off version. */
 const tags = run('git', ['tag', '--list', tag]);
 if (tags) {
   die(
@@ -80,7 +97,7 @@ if (tags) {
   );
 }
 
-/* 5. Only now spend time on the build. */
+/* 6. Only now spend time on the build. */
 console.log('Verifying...\n');
 runLive('npm', ['run', 'mod:verify']);
 

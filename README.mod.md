@@ -107,6 +107,16 @@ budget. Currently 14 files, largest 9 lines.
 
 Forked from `a323b1f29` (2026-07-30), telegram-tt 12.0.37.
 
+**Draht versions independently** — `1.0.0` onward, unrelated to upstream's numbering. That
+means `package.json`'s `version` conflicts on every rebase where upstream bumps theirs;
+always keep ours. `rerere` replays that resolution after the first time.
+
+`public/version.txt` must always equal `package.json`'s version. Upstream ships its own
+update checker that fetches that file and compares it to the compiled-in version with
+`remote !== app`, so any drift shows users an "update available" prompt that reloading
+never clears — and it fights the real updater. `npm run mod:release` refuses to publish if
+they disagree.
+
 ```bash
 git fetch upstream
 git rebase upstream/master
