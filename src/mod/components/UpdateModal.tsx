@@ -61,7 +61,8 @@ const UpdateModal: FC = () => {
             {`Draht ${version} has been downloaded.`}
           </p>
           <p className="draht-update-hint">
-            It installs on restart. Your login and message log are kept.
+            Restart now, or it installs by itself the next time you close Draht.
+            Your login and message log are kept either way.
           </p>
           <div className="draht-update-actions">
             <Button size="smaller" isText onClick={() => setVersion(undefined)}>

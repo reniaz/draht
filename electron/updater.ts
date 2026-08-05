@@ -19,7 +19,20 @@ import { autoUpdater } from 'electron-updater';
  * must be bundled as CommonJS, since its fs-extra dependency uses dynamic `require()`.
  */
 
-const CHECK_INTERVAL = 6 * 60 * 60 * 1000;
+/**
+ * How often to look for a new release while the app is running.
+ *
+ * Was six hours, which meant a release published mid-session effectively went unnoticed
+ * until the next restart — the startup check was doing all the work.
+ *
+ * Ten minutes is cheap: the GitHub provider fetches `latest.yml` from the releases
+ * download URL, which is CDN-served static content rather than a REST API call, so this
+ * does not consume the API rate limit. At 144 fetches a day of a ~350-byte file, the cost
+ * is nil.
+ */
+const CHECK_INTERVAL = 10 * 60 * 1000;
+
+let timer: NodeJS.Timeout | undefined;
 
 export function initUpdater(getWindow: () => BrowserWindow | undefined) {
   // Unpackaged runs have no app-update.yml, and checking throws.
@@ -47,6 +60,14 @@ export function initUpdater(getWindow: () => BrowserWindow | undefined) {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
+    // Stop polling once something is ready to install. Otherwise dismissing the prompt
+    // with "Later" would just bring it back ten minutes later, and again after that.
+    // The update still installs on quit via autoInstallOnAppQuit.
+    if (timer) {
+      clearInterval(timer);
+      timer = undefined;
+    }
+
     send('draht:update-ready', { version: info.version });
   });
 
@@ -64,6 +85,8 @@ export function initUpdater(getWindow: () => BrowserWindow | undefined) {
     });
   };
 
+  // Immediately, so a release published while the app was closed is picked up at once,
+  // then on the interval so one published mid-session is noticed without a restart.
   check();
-  setInterval(check, CHECK_INTERVAL);
+  timer = setInterval(check, CHECK_INTERVAL);
 }
