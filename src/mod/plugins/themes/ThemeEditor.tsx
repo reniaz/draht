@@ -3,6 +3,10 @@ import { useEffect, useState } from '../../../lib/teact/teact';
 
 import type { ThemeSeed } from './themes';
 
+import { getGlobal } from '../../../global';
+
+import { getUserFullName } from '../../../global/helpers';
+import { selectUser } from '../../../global/selectors';
 import { getSettingValue, setSettingValue } from '../../api/Settings';
 import { SEED_LABELS, TELEGRAM_DARK } from './themes';
 import { apply, findTheme, getAvailableThemes, loadFileThemes } from './index';
@@ -10,6 +14,7 @@ import { stringifyTheme } from './themeFile';
 
 import Button from '../../../components/ui/Button';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
+import ExportThemeDialog from './ExportThemeDialog';
 
 import './ThemeEditor.scss';
 
@@ -32,6 +37,7 @@ const ThemeEditor: FC = () => {
   const [, forceUpdate] = useState(0);
   const [themesPath, setThemesPath] = useState<string | undefined>();
   const [isResetOpen, setIsResetOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const selected = String(getSettingValue('Themes', 'theme') ?? 'off');
   const seed = readSeed(getSettingValue('Themes', 'customSeed')) ?? TELEGRAM_DARK;
@@ -78,14 +84,46 @@ const ThemeEditor: FC = () => {
     rerender();
   }
 
-  function exportTheme() {
-    const blob = new Blob([stringifyTheme('My theme', seed)], { type: 'application/json' });
+  /** Whatever is on screen: the custom colours, or the selected theme's own. */
+  function currentSeed() {
+    if (isCustom) return seed;
+    if (selected === 'off') return TELEGRAM_DARK;
+
+    return findTheme(selected)?.seed ?? TELEGRAM_DARK;
+  }
+
+  function currentName() {
+    if (isCustom) return 'My theme';
+    if (selected === 'off') return 'Telegram Dark';
+
+    return findTheme(selected)?.label ?? 'My theme';
+  }
+
+  /** Your own display name, as the most likely answer to "who made this". */
+  function defaultAuthor() {
+    try {
+      const global = getGlobal();
+      const user = global.currentUserId ? selectUser(global, global.currentUserId) : undefined;
+
+      return getUserFullName(user) || '';
+    } catch {
+      return '';
+    }
+  }
+
+  function exportTheme(name: string, author: string) {
+    const blob = new Blob([stringifyTheme(name, currentSeed(), author)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'my-theme.json';
+    // A theme called "Tokyo Night" should not download as my-theme.json.
+    link.download = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'theme'}.json`;
     link.click();
     URL.revokeObjectURL(url);
+
+    setIsExportOpen(false);
   }
 
   const available = getAvailableThemes();
@@ -151,6 +189,9 @@ const ThemeEditor: FC = () => {
           </Button>
         )}
         <Button size="tiny" isText onClick={refresh}>Reload themes</Button>
+        {/* Not only for the custom theme: exporting a bundled one is how you start from
+            something close and edit the file. */}
+        <Button size="tiny" isText onClick={() => setIsExportOpen(true)}>Export theme…</Button>
       </div>
 
       {themesPath && (
@@ -177,13 +218,20 @@ const ThemeEditor: FC = () => {
           ))}
 
           <div className="draht-theme-actions">
-            <Button size="tiny" isText onClick={exportTheme}>Save as file</Button>
             <Button size="tiny" isText color="danger" onClick={() => setIsResetOpen(true)}>
               Reset colours
             </Button>
           </div>
         </div>
       )}
+
+      <ExportThemeDialog
+        isOpen={isExportOpen}
+        defaultName={currentName()}
+        defaultAuthor={defaultAuthor()}
+        onExport={exportTheme}
+        onClose={() => setIsExportOpen(false)}
+      />
 
       <ConfirmDialog
         isOpen={isResetOpen}

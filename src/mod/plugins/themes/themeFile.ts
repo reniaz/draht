@@ -105,9 +105,12 @@ export function parseThemeFile(raw: string, fallbackId: string): ModTheme {
 }
 
 /** Writes a theme back out in the same format, for the export button. */
-export function stringifyTheme(name: string, seed: ThemeSeed) {
+export function stringifyTheme(name: string, seed: ThemeSeed, author?: string) {
   return `${JSON.stringify({
     name,
+    // Omitted rather than written empty, so a file without an author reads as deliberate
+    // instead of half-filled.
+    ...(author?.trim() ? { author: author.trim() } : undefined),
     colors: Object.fromEntries(KEYS.map((key) => [key, seed[key]])),
   }, undefined, 2)}\n`;
 }

@@ -125,3 +125,40 @@ describe('parseThemeFile', () => {
     expect(vars['--color-text-rgb']).toMatch(/^\d+, \d+, \d+$/);
   });
 });
+
+describe('stringifyTheme', () => {
+  const seed = {
+    background: '#101010',
+    surface: '#202020',
+    accent: '#3080ff',
+    text: '#ffffff',
+    muted: '#909090',
+    border: '#303030',
+    own: '#204080',
+    danger: '#ff5555',
+    link: '#5599ff',
+    hover: '#282828',
+    deleted: '#ff5555',
+  } as any;
+
+  it('writes the name and author it was given', () => {
+    const parsed = JSON.parse(stringifyTheme('Tokyo Night', seed, 'nejan'));
+
+    expect(parsed.name).toBe('Tokyo Night');
+    expect(parsed.author).toBe('nejan');
+  });
+
+  it('leaves the author out rather than writing an empty one', () => {
+    // A blank field reads as half-filled; an absent one reads as deliberate.
+    expect(JSON.parse(stringifyTheme('Nameless', seed, '   '))).not.toHaveProperty('author');
+    expect(JSON.parse(stringifyTheme('Nameless', seed))).not.toHaveProperty('author');
+  });
+
+  it('round-trips through the parser', () => {
+    const file = stringifyTheme('Round Trip', seed, 'nejan');
+    const theme = parseThemeFile(file, 'file:round.json');
+
+    expect(theme.label).toBe('Round Trip');
+    expect(theme.seed.background).toBe('#101010');
+  });
+});

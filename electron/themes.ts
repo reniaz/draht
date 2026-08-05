@@ -1,21 +1,53 @@
 import { app, ipcMain, shell } from 'electron';
 import {
-  existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync,
+  copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 /**
  * Themes dropped into a folder on disk.
  *
- * Kept in userData rather than next to the executable so it survives updates, and so it
- * is writable without administrator rights.
+ * Under a folder named after this app rather than in userData. userData is named for the
+ * upstream package — `telegram-t` — which is the right home for the session and the
+ * caches, and a baffling place to be told to put your themes. This is the one directory
+ * users are asked to open by hand, so it is the one that has to be findable.
+ *
+ * Beside userData rather than inside it, and deliberately not `app.setPath('userData')`:
+ * moving userData would strand the existing session and message log, which live there.
  *
  * The folder is seeded with a worked example on first run. An empty folder tells you
  * nothing about the format, and a file you can open and edit is a better explanation than
  * documentation.
  */
 function themesDir() {
+  return join(dirname(app.getPath('userData')), 'Draht', 'themes');
+}
+
+/** Where themes lived before, so an existing collection is not left behind. */
+function legacyThemesDir() {
   return join(app.getPath('userData'), 'themes');
+}
+
+/**
+ * Copies any themes from the old location on first run in the new one.
+ *
+ * Copied rather than moved: if anything here is wrong, the originals are still where they
+ * were. The example is skipped, since the new folder writes its own.
+ */
+function migrateThemes(dir: string) {
+  try {
+    const legacy = legacyThemesDir();
+    if (!existsSync(legacy)) return;
+
+    for (const file of readdirSync(legacy)) {
+      if (!file.endsWith('.json') || file === EXAMPLE_FILE) continue;
+
+      const target = join(dir, file);
+      if (!existsSync(target)) copyFileSync(join(legacy, file), target);
+    }
+  } catch {
+    // Best-effort: a themes folder that starts empty is recoverable by hand.
+  }
 }
 
 const EXAMPLE_FILE = 'example.json';
@@ -48,8 +80,10 @@ const EXAMPLE = `{
 
 function ensureThemesDir() {
   const dir = themesDir();
+  const isNew = !existsSync(dir);
 
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  if (isNew) migrateThemes(dir);
 
   const example = join(dir, EXAMPLE_FILE);
   // Only written when missing, so deleting it is respected rather than undone every launch.
