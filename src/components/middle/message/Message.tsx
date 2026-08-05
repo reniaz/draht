@@ -131,6 +131,9 @@ import { selectThreadInfo, selectThreadReadState } from '../../../global/selecto
 import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { IS_ANDROID, IS_TRANSLATION_SUPPORTED } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
+// #region mod
+import { runMessageClassNames } from '../../../mod/api/Seams';
+// #endregion mod
 import buildStyle from '../../../util/buildStyle';
 import { isUserId } from '../../../util/entities/ids';
 import { getMessageKey } from '../../../util/keys/messageKey';
@@ -837,6 +840,9 @@ const Message = ({
     (hasActiveReactions || shouldPlayEffect) && 'has-active-effect',
     isStoryMention && 'is-story-mention',
     guestChatViaId && 'has-guest-avatar',
+    // #region mod
+    runMessageClassNames(message, { isOwn }),
+    // #endregion mod
   );
 
   const text = textMessage && getMessageContent(textMessage).text;

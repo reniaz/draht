@@ -283,6 +283,9 @@ export enum SettingsScreens {
   DoNotTranslate,
   FoldersShare,
   Passkeys,
+  // #region mod
+  ModPlugins,
+  // #endregion mod
 }
 
 export type StickerSetOrReactionsSetOrRecent = Pick<ApiStickerSet, (

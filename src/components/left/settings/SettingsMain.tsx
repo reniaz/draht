@@ -103,6 +103,15 @@ const SettingsMain: FC<OwnProps & StateProps> = ({
       </div>
       <div className={styles.menuSection}>
         <Island>
+          {/* #region mod */}
+          <ListItem
+            icon="bots"
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.ModPlugins })}
+          >
+            Plugins
+          </ListItem>
+          {/* #endregion mod */}
           <ListItem
             icon="settings"
             narrow

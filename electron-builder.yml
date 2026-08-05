@@ -1,0 +1,60 @@
+appId: dev.draht.client
+productName: Draht
+copyright: GPL-3.0-or-later
+
+directories:
+  output: release
+  buildResources: electron/assets
+
+# Only what the app actually loads at runtime. `build/` is the built web app, served by the
+# loopback server in electron/server.ts; the source tree and node_modules are not needed.
+files:
+  - build/**/*
+  # Source maps are ~30 MB and only useful when debugging the renderer.
+  - '!build/**/*.map'
+  - '!build/build-stats.json'
+  - electron/dist/**/*
+  - '!electron/dist/**/*.map'
+  - electron/assets/icon-*.png
+  - electron/assets/icon-*.ico
+  - package.json
+  # electron-builder bundles production `dependencies` by default. None are needed at
+  # runtime: Vite bundles every renderer dependency into `build/`, and tsup bundles the
+  # main process with only `electron` (supplied by the runtime) left external. Including
+  # them added ~14.5k files and took the asar from ~30 MB to 211 MB.
+  - '!node_modules/**/*'
+
+# Source maps roughly double the payload and are only useful when debugging the renderer.
+asarUnpack: []
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: electron/assets/icon-wire.ico
+  # Unsigned builds trigger SmartScreen on first run. Signing needs a real code-signing
+  # certificate; without one, recipients must click "More info" -> "Run anyway".
+  signAndEditExecutable: true
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Draht
+  artifactName: Draht-Setup-${version}.${ext}
+  uninstallDisplayName: Draht
+
+linux:
+  target:
+    - AppImage
+  icon: electron/assets/icon-wire-512.png
+  category: Network
+  synopsis: Telegram client with a plugin system
+
+mac:
+  target:
+    - dmg
+  icon: electron/assets/icon-wire-512.png
+  category: public.app-category.social-networking

@@ -11,3 +11,10 @@ dev/perf/screenshot*
 .DS_store
 .github/workflows/*
 !.github/workflows/package-and-publish.yml
+
+# tg-mod
+electron/dist/
+src/mod/userplugins/*
+!src/mod/userplugins/.gitkeep
+release/
+build/

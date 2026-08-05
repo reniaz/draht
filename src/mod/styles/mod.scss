@@ -1,0 +1,50 @@
+/**
+ * Deleted-message styling.
+ *
+ * Ported from Vencord's MessageLogger, which does not write per-element colour rules —
+ * it *shadows the client's own design tokens* inside the deleted row's scope, so every
+ * descendant inherits the new colour without the stylesheet needing to know what those
+ * descendants are. That is what makes it survive upstream restyling.
+ *
+ * Token names verified against src/styles/_variables.scss.
+ */
+
+.Message.draht-deleted {
+  --color-text: var(--color-error);
+  --color-text-secondary: var(--color-error);
+  --color-text-meta: var(--color-error);
+  --color-text-meta-colored: var(--color-error);
+  --color-links: var(--color-error);
+
+  // Media is kept but visibly inert, with a hover reveal so it stays readable.
+  .media-inner,
+  .Album,
+  .WebPage,
+  .Sticker,
+  .RoundVideo {
+    filter: grayscale(1);
+    transition: filter 150ms ease-in-out;
+
+    &:hover {
+      filter: grayscale(0);
+    }
+  }
+
+  // Replying to or reacting to a message that no longer exists server-side would fail,
+  // so the affordances are removed rather than left to error.
+  .message-action-buttons,
+  .Reactions {
+    display: none;
+  }
+}
+
+body.draht-delete-style-overlay .Message.draht-deleted {
+  .message-content {
+    background-color: rgba(var(--color-error-rgb), 0.12) !important;
+  }
+}
+
+// HideSponsored
+body.draht-hide-sponsored .SponsoredMessage {
+  display: none !important;
+}

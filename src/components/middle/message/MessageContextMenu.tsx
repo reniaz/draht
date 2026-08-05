@@ -43,6 +43,9 @@ import AvatarList from '../../common/AvatarList';
 import Icon from '../../common/icons/Icon';
 import Menu from '../../ui/Menu';
 import MenuItem from '../../ui/MenuItem';
+// #region mod
+import { runMessageMenuItems } from '../../../mod/api/Seams';
+// #endregion mod
 import MenuSeparator from '../../ui/MenuSeparator';
 import NestedMenuItem from '../../ui/NestedMenuItem';
 import Skeleton from '../../ui/placeholder/Skeleton';
@@ -529,6 +532,9 @@ const MessageContextMenu: FC<OwnProps> = ({
         {canSelect && <MenuItem icon="select" onClick={onSelect}>{oldLang('Common.Select')}</MenuItem>}
         {canReport && <MenuItem icon="flag" onClick={onReport}>{oldLang('lng_context_report_msg')}</MenuItem>}
         {canDelete && <MenuItem destructive icon="delete" onClick={onDelete}>{oldLang('Delete')}</MenuItem>}
+        {/* #region mod */}
+        {runMessageMenuItems(message)}
+        {/* #endregion mod */}
         {hasCustomEmoji && (
           <>
             <MenuSeparator size="thick" />

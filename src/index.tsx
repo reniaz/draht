@@ -1,5 +1,8 @@
 import './util/handleError';
 import './util/setupServiceWorker';
+// #region mod
+import './mod/init';
+// #endregion mod
 import './global/init';
 
 import TeactDOM from './lib/teact/teact-dom';

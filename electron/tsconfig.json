@@ -1,0 +1,22 @@
+{
+  // Deliberately standalone rather than extending ../tsconfig.base.json: the Electron
+  // main process shares none of the web app's compiler setup (no DOM lib, no Teact JSX,
+  // no `@teact` path aliases), and inheriting them pulls the whole `src` tree into this
+  // program.
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": ["esnext"],
+    "types": ["node"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noImplicitReturns": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "noEmit": true
+  },
+  "include": ["*.ts"]
+}

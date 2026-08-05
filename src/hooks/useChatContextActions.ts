@@ -7,6 +7,9 @@ import { type ApiChat, type ApiUser, MAIN_THREAD_ID } from '../api/types';
 
 import { SERVICE_NOTIFICATIONS_USER_ID } from '../config';
 import { getCanDeleteChat, isChatArchived, isChatChannel, isChatGroup } from '../global/helpers';
+// #region mod
+import { runChatMenuItems } from '../mod/api/Seams';
+// #endregion mod
 import { selectThreadReadState } from '../global/selectors/threads';
 import { IS_TAURI } from '../util/browser/globalEnvironment';
 import { IS_OPEN_IN_NEW_TAB_SUPPORTED } from '../util/browser/windowEnvironment';
@@ -218,6 +221,9 @@ const useChatContextActions = ({
       !isSelf && !isServiceNotifications && !isInFolder && actionArchive,
       actionReport,
       actionDelete,
+      // #region mod
+      ...runChatMenuItems(chat.id),
+      // #endregion mod
     ]);
   }, [
     chat, isPreview, lang, isSavedDialog, isPinned, deleteTitle, handleDelete, canChangeFolder,

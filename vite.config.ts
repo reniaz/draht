@@ -9,6 +9,9 @@ import { watchAndRun } from 'vite-plugin-watch-and-run';
 
 import buildGitInfoPlugin from './plugins/gitInfo';
 import packageJson from './package.json' with { type: 'json' };
+// #region mod
+import { modPlugins } from './tools/vitePluginMod';
+// #endregion mod
 
 const DIR_NAME = dirname(fileURLToPath(import.meta.url));
 const CHANGELOG_PATH = resolve(DIR_NAME, 'src/versionNotification.txt');
@@ -89,6 +92,9 @@ export default defineConfig(({ mode }): UserConfig => {
   const telegramApiHash = env.TELEGRAM_API_HASH || '';
   const workerReportBundles: ReportOutputBundle[] = [];
   const plugins: PluginOption[] = [
+    // #region mod
+    modPlugins(),
+    // #endregion mod
     buildGitInfoPlugin({
       appEnv,
       head: HEAD,
@@ -219,6 +225,14 @@ export default defineConfig(({ mode }): UserConfig => {
       },
     },
     build: {
+      // #region mod
+      // Upstream tracks its own `dist/` in git (it commits builds via
+      // `web:release:production`). Our builds embed TELEGRAM_API_HASH, so writing them
+      // into a tracked directory means one `git add -A` publishes the credentials — and
+      // on a public repo that is unrecoverable. Building into an ignored directory makes
+      // that structurally impossible instead of relying on remembering to revert `dist/`.
+      outDir: 'build',
+      // #endregion mod
       sourcemap: true,
       assetsInlineLimit: (filePath) => (IMAGE_ASSET_RE.test(filePath) ? false : undefined),
       rolldownOptions: {

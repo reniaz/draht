@@ -115,6 +115,9 @@ import {
   selectThreadLocalStateParam,
   selectThreadReadState,
 } from '../../selectors/threads';
+// #region mod
+import { runBeforeDeleteMessages } from '../../../mod/api/Seams';
+// #endregion mod
 
 const ANIMATION_DELAY = 350;
 const SNAP_ANIMATION_DELAY = 1000;
@@ -1518,6 +1521,11 @@ export function deleteThread<T extends GlobalState>(
 export function deleteMessages<T extends GlobalState>(
   global: T, chatId: string | undefined, ids: number[], actions: RequiredGlobalActions,
 ) {
+  // #region mod
+  ({ global, deletableIds: ids } = runBeforeDeleteMessages(global, chatId, ids));
+  if (!ids.length) { setGlobal(global); return; }
+  // #endregion mod
+
   // Channel update
 
   if (chatId) {

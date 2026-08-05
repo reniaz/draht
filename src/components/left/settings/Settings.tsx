@@ -24,6 +24,9 @@ import SettingsDataStorage from './SettingsDataStorage';
 import SettingsDoNotTranslate from './SettingsDoNotTranslate';
 import SettingsEditProfile from './SettingsEditProfile';
 import SettingsExperimental from './SettingsExperimental';
+// #region mod
+import ModSettings from '../../../mod/components/settings/ModSettings';
+// #endregion mod
 import SettingsGeneral from './SettingsGeneral';
 import SettingsGeneralBackground from './SettingsGeneralBackground';
 import SettingsGeneralBackgroundColor from './SettingsGeneralBackgroundColor';
@@ -311,6 +314,12 @@ const Settings: FC<OwnProps> = ({
         return (
           <SettingsExperimental isActive={isScreenActive} onReset={handleReset} />
         );
+      // #region mod
+      case SettingsScreens.ModPlugins:
+        return (
+          <ModSettings isActive={isScreenActive} onReset={handleReset} />
+        );
+      // #endregion mod
       case SettingsScreens.GeneralChatBackground:
         return (
           <SettingsGeneralBackground

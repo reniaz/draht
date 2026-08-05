@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 16 16">
+  <!--
+    Draht app icon — "Draht" is German for wire.
+
+    Keeps Telegram's blue disc but replaces the paper plane with a twisted pair: two
+    conductors braiding around each other, as in real twisted-pair cabling.
+
+    Chosen over the alternatives after rendering them: a sagging telegraph line read as a
+    suspension bridge, and a cable-with-plug turned into an unreadable hook at icon size.
+    Two crossing strands stay legible when shrunk because the shape is carried by the
+    negative space between the crossings rather than by fine detail.
+  -->
+  <defs>
+    <linearGradient id="tg" x1="50%" x2="50%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#38AEEB"/>
+      <stop offset="100%" stop-color="#279AD1"/>
+    </linearGradient>
+  </defs>
+  <g fill="none">
+    <circle cx="8" cy="8" r="8" fill="url(#tg)"/>
+    <g stroke="#FFF" stroke-linecap="round" stroke-width="1.25">
+      <path d="M1.6 6.1C3.6 6.1 3.6 9.9 5.6 9.9C7.6 9.9 7.6 6.1 9.6 6.1C11.6 6.1 11.6 9.9 14.4 9.9"/>
+      <path d="M1.6 9.9C3.6 9.9 3.6 6.1 5.6 6.1C7.6 6.1 7.6 9.9 9.6 9.9C11.6 9.9 11.6 6.1 14.4 6.1"/>
+    </g>
+  </g>
+</svg>
