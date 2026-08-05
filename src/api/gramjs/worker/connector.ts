@@ -10,6 +10,9 @@ import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { IS_SAFARI } from '../../../util/browser/windowEnvironment';
 import { logDebugMessage } from '../../../util/debugConsole';
 import Deferred from '../../../util/Deferred';
+// #region mod
+import { isApiMethodBlocked } from '../../../mod/api/ApiGuard';
+// #endregion mod
 import { getCurrentTabId, subscribeToMasterChange } from '../../../util/establishMultitabRole';
 import generateUniqueId from '../../../util/generateUniqueId';
 import { ACCOUNT_SLOT, DATA_BROADCAST_CHANNEL_NAME } from '../../../util/multiaccount';
@@ -205,6 +208,10 @@ export function callApiLocal<T extends keyof Methods>(
 }
 
 export function callApi<T extends keyof Methods>(fnName: T, ...args: MethodArgs<T>): EnsurePromise<MethodResponse<T>> {
+  // #region mod
+  if (isApiMethodBlocked(fnName)) return Promise.resolve(undefined) as EnsurePromise<MethodResponse<T>>;
+  // #endregion mod
+
   if (!isInited && isMasterTab) {
     if (NO_QUEUE_BEFORE_INIT.has(fnName)) {
       return Promise.resolve(undefined) as EnsurePromise<MethodResponse<T>>;

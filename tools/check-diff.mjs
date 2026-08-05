@@ -24,9 +24,10 @@ const ALLOWLIST = {
   'src/components/middle/message/Message.tsx': 6,
   // Every title update funnels through setPageTitleInstant, so one call covers them all.
   'src/util/updatePageTitle.ts': 8,
-  // callApi is the single point every outgoing request passes through, which is the only
-  // place a plugin can suppress one — the action bus can observe but not cancel.
-  'src/api/gramjs/methods/init.ts': 8,
+  // The main-thread callApi, which is what the app actually calls. Note this is NOT
+  // methods/init.ts — that one runs inside the GramJS worker, where a guard registered by
+  // a main-thread plugin would never be seen.
+  'src/api/gramjs/worker/connector.ts': 8,
   'src/components/middle/message/MessageContextMenu.tsx': 6,
   'src/hooks/useChatContextActions.ts': 6,
   // Single mount point for root-level mod UI; further modals nest inside ModRoot.

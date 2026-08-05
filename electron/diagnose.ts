@@ -70,6 +70,19 @@ void app.whenReady().then(async () => {
     } catch (e) { return { available: true, error: e.name + ': ' + e.message }; }
   })()`);
 
+  const notifications = await win.webContents.executeJavaScript(`(async () => {
+    if (!('Notification' in window)) return { supported: false };
+    const before = Notification.permission;
+    let afterRequest;
+    try { afterRequest = await Notification.requestPermission(); } catch (e) { afterRequest = 'threw: ' + e.message; }
+    let shown = false;
+    try { new Notification('Draht test'); shown = true; } catch (e) { shown = 'threw: ' + e.message; }
+    return { supported: true, before, afterRequest, canConstruct: shown };
+  })()`);
+
+  console.log('\n--- notifications ---');
+  console.log(JSON.stringify(notifications, undefined, 2));
+
   console.log('\n--- local font access ---');
   console.log(JSON.stringify(fonts, undefined, 2));
 

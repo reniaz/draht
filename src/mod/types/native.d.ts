@@ -12,6 +12,8 @@ type DrahtNative = {
   /** Returns an unsubscribe function. */
   onUpdateReady: (cb: (info: { version: string }) => void) => () => void;
   installUpdate: () => void;
+  focusWindow: () => void;
+  flashWindow: () => void;
 };
 
 interface Window {

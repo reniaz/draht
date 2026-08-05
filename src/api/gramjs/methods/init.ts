@@ -7,9 +7,6 @@ import type { LocalDb } from '../localDb';
 import type { MethodArgs, MethodResponse, Methods } from './types';
 
 import Deferred from '../../../util/Deferred';
-// #region mod
-import { isApiMethodBlocked } from '../../../mod/api/ApiGuard';
-// #endregion mod
 import { updateFullLocalDb } from '../localDb';
 import { init as initUpdateEmitter } from '../updates/apiUpdateEmitter';
 import { init as initClient } from './client';
@@ -26,9 +23,6 @@ export function initApi(_onUpdate: OnApiUpdate, initialArgs: ApiInitialArgs, ini
 }
 
 export function callApi<T extends keyof Methods>(fnName: T, ...args: MethodArgs<T>): MethodResponse<T> {
-  // #region mod
-  if (isApiMethodBlocked(fnName)) return Promise.resolve(undefined) as MethodResponse<T>;
-  // #endregion mod
   // @ts-ignore
   return methods[fnName](...args) as MethodResponse<T>;
 }

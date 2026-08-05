@@ -35,4 +35,14 @@ contextBridge.exposeInMainWorld('draht', {
   installUpdate() {
     ipcRenderer.send('draht:install-update');
   },
+
+  /** Restores and raises the window. `window.focus()` alone cannot do this in Electron. */
+  focusWindow() {
+    ipcRenderer.send('draht:focus-window');
+  },
+
+  /** Flashes the taskbar entry until the window is looked at. */
+  flashWindow() {
+    ipcRenderer.send('draht:flash-window');
+  },
 });

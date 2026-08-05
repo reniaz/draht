@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 
 import { startWebServer, type WebServer } from './server';
 import { initUpdater } from './updater';
+import { initWindowControls } from './windowControls';
 
 // CommonJS output (see tsup.config.ts), so __dirname is available directly.
 const DIR_NAME = __dirname;
@@ -144,9 +145,15 @@ if (!app.requestSingleInstanceLock()) {
 
     const mainWindow = createWindow(startUrl, appOrigin);
 
-    initUpdater(() => (mainWindow.isDestroyed()
+    const currentWindow = () => (mainWindow.isDestroyed()
       ? BrowserWindow.getAllWindows()[0]
-      : mainWindow));
+      : mainWindow);
+
+    initUpdater(currentWindow);
+    initWindowControls(currentWindow);
+
+    // Clear any taskbar flash as soon as the window is actually looked at.
+    mainWindow.on('focus', () => mainWindow.flashFrame(false));
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow(startUrl, appOrigin);
