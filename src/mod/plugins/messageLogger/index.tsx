@@ -16,6 +16,9 @@ import {
   keepMediaFor, restoreMedia, setMediaLimits, setMediaPersistence,
 } from './mediaStore';
 import { clearChatLog, hasChatLog, openLogViewer } from './actions';
+import {
+  clearRecent, recall, recallChatId, remember,
+} from './recentMessages';
 import { MessageLogMenuItems } from './MessageLogMenu';
 
 const logger = modLogger.scoped('MessageLogger');
@@ -234,6 +237,25 @@ function shouldIgnore(
  */
 const bypass = new Set<string>();
 
+/**
+ * Keeps arriving messages to hand, so a deletion can still be answered when the client is
+ * not holding the message itself.
+ *
+ * Deliberately unfiltered: `shouldIgnore` runs at deletion time, where the settings in
+ * force are the ones that matter, and a buffer filtered by a setting the user has since
+ * changed would be silently incomplete. Nothing here is written to disk.
+ */
+const captureIncoming = (global: GlobalState, update: any) => {
+  try {
+    const { chatId, message } = update || {};
+    if (chatId && message?.id) remember(chatId, message);
+  } catch (err) {
+    logger.error('captureIncoming failed', err);
+  }
+
+  return undefined;
+};
+
 function bypassKey(chatId: string, messageId: number) {
   return `${chatId}:${messageId}`;
 }
@@ -253,7 +275,9 @@ function protectMessages<T extends GlobalState>(
     // `chatId` is undefined on the common-box path (private chats and basic groups),
     // where ids are global message ids that must be resolved to a chat first. That path
     // deletes unconditionally upstream, so getting it wrong loses the message outright.
-    const resolvedChatId = chatId ?? selectCommonBoxChatId(global, id);
+    // The buffer answers when upstream's resolution cannot: it searches loaded messages,
+    // which is exactly what is missing for an unopened chat.
+    const resolvedChatId = chatId ?? selectCommonBoxChatId(global, id) ?? recallChatId(id);
     if (!resolvedChatId) {
       deletableIds.push(id);
       continue;
@@ -264,7 +288,9 @@ function protectMessages<T extends GlobalState>(
       continue;
     }
 
-    const message = selectChatMessage(global, resolvedChatId, id);
+    // State first, since it is the most complete; the buffer covers what state does not
+    // hold — an unopened chat, a message scrolled out of the loaded window.
+    const message = selectChatMessage(global, resolvedChatId, id) ?? recall(resolvedChatId, id);
     if (!message || shouldIgnore(global, resolvedChatId, message)) {
       deletableIds.push(id);
       continue;
@@ -383,6 +409,7 @@ export default definePlugin({
 
   apiUpdates: {
     updateMessage: captureEdit,
+    newMessage: captureIncoming,
   },
 
   start() {
@@ -395,6 +422,7 @@ export default definePlugin({
   },
 
   stop() {
+    clearRecent();
     bypass.clear();
     document.body.classList.remove('draht-delete-style-overlay', 'draht-delete-style-text');
   },

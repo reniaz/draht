@@ -108,6 +108,43 @@ describe('messageLogger deletion interception', () => {
     stopPlugin(plugin);
   });
 
+  it('keeps a message the client is not holding, from the recent buffer', async () => {
+    // The reported gap: a chat that was never opened has nothing in global state, so the
+    // seam's lookup misses and the deletion goes through with nothing kept.
+    const { remember, clearRecent } = await import('./recentMessages');
+    clearRecent();
+    remember('-100999', { id: 42, content: { text: { text: 'gone' } } } as any);
+
+    // A state that knows nothing about this chat at all.
+    const global = makeGlobal({});
+
+    const result = runBeforeDeleteMessages(global, '-100999', [42]);
+
+    expect(result.deletableIds).toEqual([]);
+  });
+
+  it('resolves an unknown chat from the recent buffer on the common-box path', async () => {
+    // No chat id on this path, and upstream resolves it by searching loaded messages —
+    // which misses for exactly the same reason.
+    const { remember, clearRecent } = await import('./recentMessages');
+    clearRecent();
+    remember('777', { id: 88, content: { text: { text: 'gone' } } } as any);
+
+    const result = runBeforeDeleteMessages(makeGlobal({}), undefined, [88]);
+
+    expect(result.deletableIds).toEqual([]);
+  });
+
+  it('still lets a genuinely unknown message through', async () => {
+    // Nothing anywhere: the deletion has to proceed rather than be swallowed.
+    const { clearRecent } = await import('./recentMessages');
+    clearRecent();
+
+    const result = runBeforeDeleteMessages(makeGlobal({}), '-100123', [999]);
+
+    expect(result.deletableIds).toEqual([999]);
+  });
+
   it('protects messages instead of letting them be deleted', () => {
     const global = makeGlobal({ '-100123': [1, 2, 3] });
 
