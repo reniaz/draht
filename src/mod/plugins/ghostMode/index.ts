@@ -1,8 +1,11 @@
 import { callApi } from '../../../api/gramjs';
+import { selectCurrentMessageList } from '../../../global/selectors';
 
+import { attachAction, detachAction } from '../../api/ActionBus';
 import {
   blockApiMethod, interceptApiMethod, unblockAllForOwner, unblockApiMethod,
 } from '../../api/ApiGuard';
+import { applyMarks, recordRead, restoreMarks } from './localRead';
 import { modLogger } from '../../api/Logger';
 import { definePluginSettings } from '../../api/Settings';
 import { definePlugin, OptionType } from '../../api/types';
@@ -137,6 +140,20 @@ const settings = definePluginSettings({
     default: true,
     onChange: () => apply(),
   },
+  markReadLocally: {
+    type: OptionType.BOOLEAN,
+    displayName: 'Still count them as read here',
+    description:
+      'Remember what you have read on this machine, so chats stop opening on their '
+      + 'oldest unread message. Nothing is sent anywhere; only this client is told.',
+    default: true,
+    hidden() {
+      // Meaningless on its own — there is nothing to remember locally if the read is
+      // being reported normally.
+      return !(this as any).store.hideReadReceipts;
+    },
+    onChange: () => apply(),
+  },
   hideOnlineStatus: {
     type: OptionType.BOOLEAN,
     displayName: 'Stay offline (briefly breaks when you send)',
@@ -151,6 +168,46 @@ const settings = definePluginSettings({
   },
 });
 
+/** Records how far the user has read, without any of it reaching the server. */
+const handleMarkListRead = ((global: any, actions: any, payload: any) => {
+  const { maxId, tabId } = payload || {};
+  const current = selectCurrentMessageList(global, tabId);
+  if (!current || !maxId) return undefined;
+
+  recordRead(current.chatId, current.threadId, maxId);
+
+  return undefined;
+}) as never;
+
+const handleMarkMessagesRead = ((global: any, actions: any, payload: any) => {
+  const { chatId, messageIds } = payload || {};
+  if (!chatId || !messageIds?.length) return undefined;
+
+  recordRead(chatId, -1, Math.max(...messageIds));
+
+  return undefined;
+}) as never;
+
+/**
+ * Re-applies the marks as a chat opens.
+ *
+ * This is the moment that matters: the message list picks where to open from the first
+ * unread id, so a stale one is what sends you to the top of a chat you have already read.
+ */
+const handleOpen = ((global: any) => applyMarks(global)) as never;
+
+function attachLocalRead() {
+  attachAction('markMessageListRead', handleMarkListRead);
+  attachAction('markMessagesRead', handleMarkMessagesRead);
+  attachAction('processOpenChatOrThread', handleOpen);
+}
+
+function detachLocalRead() {
+  detachAction('markMessageListRead', handleMarkListRead);
+  detachAction('markMessagesRead', handleMarkMessagesRead);
+  detachAction('processOpenChatOrThread', handleOpen);
+}
+
 function apply() {
   try {
     for (const method of TYPING_METHODS) {
@@ -162,6 +219,9 @@ function apply() {
       if (settings.store.hideReadReceipts) blockApiMethod(OWNER, method);
       else unblockApiMethod(OWNER, method);
     }
+
+    detachLocalRead();
+    if (settings.store.hideReadReceipts && settings.store.markReadLocally) attachLocalRead();
 
     if (settings.store.hideOnlineStatus) {
       // Rewritten rather than blocked. Dropping the call only makes the client silent,
@@ -203,12 +263,14 @@ export default definePlugin({
   settings,
 
   start() {
+    restoreMarks();
     apply();
     logger.info('started');
   },
 
   stop() {
     stopAsserting();
+    detachLocalRead();
     unblockAllForOwner(OWNER);
   },
 });
