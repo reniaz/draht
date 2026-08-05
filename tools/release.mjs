@@ -34,6 +34,67 @@ function die(message, hint) {
 const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
 const tag = `v${version}`;
 
+const builderConfig = readFileSync('electron-builder.yml', 'utf8');
+const owner = builderConfig.match(/^\s*owner:\s*(\S+)/m)?.[1];
+const repo = builderConfig.match(/^\s*repo:\s*(\S+)/m)?.[1];
+
+function gh(path, init = {}) {
+  return fetch(`https://api.github.com/repos/${owner}/${repo}${path}`, {
+    ...init,
+    headers: {
+      accept: 'application/vnd.github+json',
+      authorization: `Bearer ${process.env.GH_TOKEN || process.env.GITHUB_TOKEN}`,
+      'content-type': 'application/json',
+      ...init.headers,
+    },
+  });
+}
+
+async function ensureRelease() {
+  const existing = await gh(`/releases/tags/${tag}`);
+  if (existing.ok) {
+    console.log(`Release ${tag} already exists; uploading into it.\n`);
+    return;
+  }
+
+  const created = await gh('/releases', {
+    method: 'POST',
+    body: JSON.stringify({ tag_name: tag, name: version, draft: false, prerelease: false }),
+  });
+
+  if (!created.ok) {
+    die(`Could not create release ${tag}: ${created.status} ${await created.text()}`);
+  }
+
+  console.log(`Created release ${tag}.\n`);
+}
+
+async function verifyRelease() {
+  const all = await gh('/releases').then((r) => r.json());
+  const forTag = all.filter((r) => r.tag_name === tag);
+
+  if (forTag.length > 1) {
+    die(
+      `${forTag.length} releases exist for ${tag} — assets are split across them.`,
+      `Delete the extras at https://github.com/${owner}/${repo}/releases and re-run.`,
+    );
+  }
+
+  const assets = forTag[0]?.assets.map((a) => a.name) ?? [];
+  const required = ['latest.yml', `Draht-Setup-${version}.exe`];
+  const missing = required.filter((name) => !assets.includes(name));
+
+  if (missing.length) {
+    die(
+      `Release ${tag} is missing: ${missing.join(', ')}`,
+      'Without latest.yml the updater cannot see this release.\n'
+      + `    Found: ${assets.join(', ') || '(nothing)'}`,
+    );
+  }
+
+  console.log(`  Verified: ${assets.join(', ')}`);
+}
+
 console.log(`\nReleasing ${tag}\n`);
 
 /* 1. The token has to exist before we spend minutes building. */
@@ -108,8 +169,24 @@ console.log(`\nTagging ${tag}...\n`);
 run('git', ['tag', '-a', tag, '-m', `Draht ${version}`]);
 runLive('git', ['push', 'origin', tag]);
 
+/*
+ * 7. Create the GitHub release before electron-builder uploads anything.
+ *
+ * electron-builder uploads artefacts in parallel, and each upload independently does
+ * "find or create the release for this tag". When they start together none of them sees a
+ * release yet, so several get created for the same tag — and the assets scatter across
+ * them. GitHub then picks one as "latest", and if that is not the one holding latest.yml,
+ * every client's update check 404s silently.
+ *
+ * Creating it up front means every upload finds the same existing release.
+ */
+await ensureRelease();
+
 console.log('\nPublishing...\n');
 runLive('npx', ['electron-builder', '--win', 'nsis', '--publish', 'always']);
+
+/* 8. Fail loudly if the assets did not all land on one release. */
+await verifyRelease();
 
 console.log(`\n  Released ${tag}.`);
 console.log('  Installed copies will pick it up on their next launch.\n');
