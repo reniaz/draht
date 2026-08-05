@@ -66,12 +66,19 @@ export type ChatMenuItems = (chatId: string) => MenuItemContextAction[] | undefi
  */
 export type OpenChatInNewTab = (chatId: string, threadId: ThreadId) => boolean;
 
+/**
+ * Handles "My Profile". Returning true means the mod took it, and upstream must not also
+ * switch the message list.
+ */
+export type OpenOwnProfile = () => boolean;
+
 type SeamRegistry = {
   beforeDeleteMessages: BeforeDeleteMessages[];
   messageClassNames: MessageClassNames[];
   messageMenuItems: MessageMenuItems[];
   chatMenuItems: ChatMenuItems[];
   openChatInNewTab: OpenChatInNewTab[];
+  openOwnProfile: OpenOwnProfile[];
 };
 
 const seams: SeamRegistry = {
@@ -80,6 +87,7 @@ const seams: SeamRegistry = {
   messageMenuItems: [],
   chatMenuItems: [],
   openChatInNewTab: [],
+  openOwnProfile: [],
 };
 
 export function addSeam<K extends keyof SeamRegistry>(name: K, fn: SeamRegistry[K][number]) {
@@ -213,6 +221,25 @@ export function runOpenChatInNewTab(chatId: string, threadId: ThreadId): boolean
       if (handler(chatId, threadId)) return true;
     } catch (err) {
       modLogger.error('openChatInNewTab seam failed', err);
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Called at the top of upstream `openChatWithInfo` when it carries `isOwnProfile`.
+ *
+ * Upstream opens your own chat — which is Saved Messages — and puts the profile panel
+ * beside it, so "My Profile" reads as being thrown into Saved Messages. A handler that
+ * returns true keeps you where you are.
+ */
+export function runOpenOwnProfile(): boolean {
+  for (const handler of seams.openOwnProfile) {
+    try {
+      if (handler()) return true;
+    } catch (err) {
+      modLogger.error('openOwnProfile seam failed', err);
     }
   }
 

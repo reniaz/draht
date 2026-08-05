@@ -17,7 +17,7 @@ import { updateTabState } from '../../reducers/tabs';
 import { replaceTabThreadParam } from '../../reducers/threads';
 import { selectChat, selectCurrentMessageList, selectTabState } from '../../selectors';
 // #region mod
-import { runOpenChatInNewTab } from '../../../mod/api/Seams';
+import { runOpenChatInNewTab, runOpenOwnProfile } from '../../../mod/api/Seams';
 // #endregion mod
 
 addActionHandler('openDeleteMemberModal', (global, actions, payload): ActionReturnType => {
@@ -135,6 +135,10 @@ addActionHandler('openPreviousChat', (global, actions, payload): ActionReturnTyp
 
 addActionHandler('openChatWithInfo', (global, actions, payload): ActionReturnType => {
   const { profileTab, forceScrollProfileTab, isOwnProfile, tabId = getCurrentTabId(), ...rest } = payload;
+
+  // #region mod
+  if (isOwnProfile && runOpenOwnProfile()) return undefined;
+  // #endregion mod
 
   const currentMessageList = selectCurrentMessageList(global, tabId);
   const isSameMessageList = currentMessageList?.chatId === rest.id

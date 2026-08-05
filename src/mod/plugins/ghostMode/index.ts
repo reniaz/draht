@@ -44,19 +44,28 @@ const ACTIVITY_METHODS = [
   'sendPollVote',
 ];
 
-/** Re-assert after a burst of activity has settled rather than once per request. */
-const REASSERT_DELAY_MS = 1500;
+/**
+ * Re-assert at several points after activity, not once.
+ *
+ * A single assertion races the request it is answering. The guard sees a request as it is
+ * *issued*; the server marks you online when it *processes* it, which for anything
+ * carrying an upload can be seconds later. An assertion that lands first is simply
+ * overwritten, and you are visible again with nothing further scheduled. Repeating past
+ * the point where the send has certainly completed removes the race rather than betting
+ * on a delay that is long enough.
+ */
+const REASSERT_DELAYS_MS = [1500, 6000, 15_000];
 
 /**
- * Bounds how long activity can leave you visible, for anything not in the list above.
+ * Bounds how long any activity the list above does not cover can leave you visible.
  *
- * Matches the cadence Telegram clients use for their own online pings, so this is the same
- * amount of traffic the client would produce anyway — with the opposite meaning.
+ * Half the cadence Telegram clients use for their own online pings, so it is not more
+ * traffic than a client normally produces — carrying the opposite meaning.
  */
-const HEARTBEAT_MS = 60_000;
+const HEARTBEAT_MS = 30_000;
 
 let heartbeat: number | undefined;
-let reassertTimer: number | undefined;
+let reassertTimers: number[] = [];
 
 function assertOffline() {
   // Goes through the interceptor below, which pins the argument to false regardless.
@@ -65,20 +74,25 @@ function assertOffline() {
   });
 }
 
-function scheduleReassert() {
-  if (reassertTimer) self.clearTimeout(reassertTimer);
+function clearReasserts() {
+  for (const timer of reassertTimers) self.clearTimeout(timer);
+  reassertTimers = [];
+}
 
-  reassertTimer = self.setTimeout(() => {
-    reassertTimer = undefined;
-    assertOffline();
-  }, REASSERT_DELAY_MS);
+function scheduleReassert() {
+  // Restarted on each request, so a burst of activity is answered once — from the end of
+  // the burst, which is the point that matters.
+  clearReasserts();
+
+  reassertTimers = REASSERT_DELAYS_MS.map(
+    (delay) => self.setTimeout(assertOffline, delay),
+  );
 }
 
 function stopAsserting() {
   if (heartbeat) self.clearInterval(heartbeat);
-  if (reassertTimer) self.clearTimeout(reassertTimer);
   heartbeat = undefined;
-  reassertTimer = undefined;
+  clearReasserts();
 }
 
 const settings = definePluginSettings({

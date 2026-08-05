@@ -30,9 +30,10 @@ const ALLOWLIST = {
   'src/api/gramjs/worker/connector.ts': 10,
   'src/components/middle/message/MessageContextMenu.tsx': 6,
 
-  // Chat tabs. Upstream's "open in new tab" opens a browser window, which in Electron is
-  // the OS browser showing a second copy of the client; the seam keeps it in this one.
-  'src/global/actions/ui/chats.ts': 8,
+  // Two seams: "open in new tab", which upstream opens as a browser window (in Electron,
+  // the OS browser showing a second copy of the client), and "My Profile", which upstream
+  // answers by switching you to Saved Messages.
+  'src/global/actions/ui/chats.ts': 12,
   'src/components/middle/MiddleColumn.tsx': 8,
   'src/hooks/useChatContextActions.ts': 6,
   // Single mount point for root-level mod UI; further modals nest inside ModRoot.

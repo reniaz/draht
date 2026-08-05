@@ -34,6 +34,16 @@ const ModGeneral: FC = () => {
           onChange={(e) => toggle('ChatTabs', e.currentTarget.checked)}
         />
       </div>
+
+      <div className="draht-setting draht-setting-boolean">
+        <Checkbox
+          label="Keep My Profile out of Saved Messages"
+          subLabel={'Your own chat is Saved Messages, so My Profile normally switches you '
+            + 'there. This opens it in Settings and leaves your chat alone.'}
+          checked={isPluginEnabled('OwnProfile')}
+          onChange={(e) => toggle('OwnProfile', e.currentTarget.checked)}
+        />
+      </div>
     </div>
   );
 };

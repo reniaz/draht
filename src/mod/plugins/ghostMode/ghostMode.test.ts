@@ -143,26 +143,48 @@ describe('staying offline through activity', () => {
     expect(calls).toContainEqual(['updateIsOnline', false]);
   });
 
-  it('coalesces a burst of activity into one assertion', async () => {
+  it('keeps asserting past the point the send can have completed', async () => {
+    // One assertion races the request it answers: the guard sees the request as it is
+    // issued, the server marks you online when it processes it. An assertion that lands
+    // first is simply overwritten.
     const { api } = await bootWith({ GhostMode: { enabled: true } });
     calls.length = 0;
 
-    api.interceptApiCall('sendMessage', [{ text: 'a' }]);
-    api.interceptApiCall('sendMessage', [{ text: 'b' }]);
-    api.interceptApiCall('sendReaction', [{}]);
+    api.interceptApiCall('sendMessage', [{ text: 'hi' }]);
 
     await vi.advanceTimersByTimeAsync(2000);
+    const early = calls.length;
 
-    expect(calls).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(20_000);
+
+    expect(early).toBeGreaterThan(0);
+    expect(calls.length).toBeGreaterThan(early);
+  });
+
+  it('answers a burst from its end, not once per request', async () => {
+    const { api } = await bootWith({ GhostMode: { enabled: true } });
+
+    api.interceptApiCall('sendMessage', [{ text: 'a' }]);
+    await vi.advanceTimersByTimeAsync(1000);
+    api.interceptApiCall('sendMessage', [{ text: 'b' }]);
+    calls.length = 0;
+
+    // The first request's assertions were restarted by the second, so nothing has landed
+    // yet at the point the first one would have fired.
+    await vi.advanceTimersByTimeAsync(600);
+    expect(calls).toHaveLength(0);
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(calls.length).toBeGreaterThan(0);
   });
 
   it('keeps asserting on a heartbeat, for activity it cannot see', async () => {
     await bootWith({ GhostMode: { enabled: true } });
     calls.length = 0;
 
-    await vi.advanceTimersByTimeAsync(185_000);
+    await vi.advanceTimersByTimeAsync(95_000);
 
-    // Three minutes, one assertion a minute.
+    // Every 30 seconds.
     expect(calls).toHaveLength(3);
   });
 
