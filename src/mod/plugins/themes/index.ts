@@ -41,28 +41,40 @@ const settings = definePluginSettings({
   },
 });
 
-/** Properties currently written to <html>, so they can be removed exactly. */
-let applied: string[] = [];
+const STYLE_ELEMENT_ID = 'draht-theme';
 
 function clear() {
-  const { style } = document.documentElement;
-  applied.forEach((name) => style.removeProperty(name));
-  applied = [];
+  document.getElementById(STYLE_ELEMENT_ID)?.remove();
 }
 
+/**
+ * Applies the palette as an injected stylesheet with `!important`.
+ *
+ * The obvious approach — `documentElement.style.setProperty` — loses. telegram-tt writes
+ * its own theme colours as inline styles on `<html>` during startup, *after* the mod
+ * initialises (the mod deliberately loads first so plugins can register action handlers
+ * ahead of upstream's). Our values were simply overwritten, which is why a theme only
+ * appeared after toggling the plugin off and on: that re-applied it late enough to win.
+ *
+ * Racing to run last would be fragile. Instead this sidesteps ordering entirely: per the
+ * CSS cascade an `!important` declaration in a stylesheet beats a *normal* inline style,
+ * so it does not matter when upstream writes its own values or how often.
+ */
 function applySeed(seed: ThemeSeed) {
-  clear();
-
-  const { style } = document.documentElement;
   const vars = buildThemeVars(seed, (Number(settings.store.brightness) || 0) / 100);
 
-  // Inline properties on <html> rather than an injected stylesheet: Telegram's own
-  // palette is defined on `.component-theme-dark`, and an inline declaration outranks any
-  // class selector without needing `!important` or specificity games.
-  for (const [name, value] of Object.entries(vars)) {
-    style.setProperty(name, value);
-    applied.push(name);
+  const declarations = Object.entries(vars)
+    .map(([name, value]) => `  ${name}: ${value} !important;`)
+    .join('\n');
+
+  let element = document.getElementById(STYLE_ELEMENT_ID) as HTMLStyleElement | null;
+  if (!element) {
+    element = document.createElement('style');
+    element.id = STYLE_ELEMENT_ID;
+    document.head.appendChild(element);
   }
+
+  element.textContent = `:root {\n${declarations}\n}`;
 }
 
 function apply() {

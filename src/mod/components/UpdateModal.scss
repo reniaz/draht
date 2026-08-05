@@ -1,0 +1,18 @@
+.draht-update-modal {
+  .draht-update-text {
+    margin: 0;
+  }
+
+  .draht-update-hint {
+    margin: 0.5rem 0 0;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+
+  .draht-update-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+  }
+}

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
 
 /**
@@ -8,10 +8,15 @@ import { autoUpdater } from 'electron-updater';
  * `app-update.yml` into the packaged resources — that file is what electron-updater reads
  * at runtime, so nothing is hardcoded here.
  *
- * electron-updater is bundled into this file by tsup rather than shipped in
- * node_modules. The package deliberately excludes node_modules (Vite bundles the renderer
- * and upstream's ~14.5k dependency files are dead weight), so an external require would
- * not resolve in the installed app.
+ * The update prompt is rendered by the app itself (src/mod/components/UpdateModal.tsx)
+ * rather than with `dialog.showMessageBox`. Electron's dialog is an OS-native message box
+ * that cannot be styled, so it appears as a stock Windows dialog in the middle of an
+ * otherwise themed client. The main process only reports state over IPC; the renderer
+ * decides how to present it.
+ *
+ * electron-updater is bundled into this file by tsup rather than shipped in node_modules.
+ * The package excludes node_modules, so an external require would not resolve — and it
+ * must be bundled as CommonJS, since its fs-extra dependency uses dynamic `require()`.
  */
 
 const CHECK_INTERVAL = 6 * 60 * 60 * 1000;
@@ -20,10 +25,13 @@ export function initUpdater(getWindow: () => BrowserWindow | undefined) {
   // Unpackaged runs have no app-update.yml, and checking throws.
   if (!app.isPackaged) return;
 
-  // Downloads happen in the background; installation waits for the user to agree, so a
-  // restart is never forced mid-conversation.
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
+
+  const send = (channel: string, payload?: unknown) => {
+    const window = getWindow();
+    if (window && !window.isDestroyed()) window.webContents.send(channel, payload);
+  };
 
   autoUpdater.on('error', (err) => {
     // Being offline, or rate-limited by GitHub, is normal and must stay silent.
@@ -34,24 +42,20 @@ export function initUpdater(getWindow: () => BrowserWindow | undefined) {
     console.log(`[updater] downloading ${info.version}`);
   });
 
-  autoUpdater.on('update-downloaded', async (info) => {
-    const window = getWindow();
+  autoUpdater.on('download-progress', (progress) => {
+    send('draht:update-progress', { percent: Math.round(progress.percent) });
+  });
 
-    const { response } = await dialog.showMessageBox(window!, {
-      type: 'info',
-      buttons: ['Restart now', 'Later'],
-      defaultId: 0,
-      cancelId: 1,
-      title: 'Update ready',
-      message: `Draht ${info.version} is ready to install.`,
-      detail: 'The update installs when you restart. Your login and message log are kept.',
-    });
+  autoUpdater.on('update-downloaded', (info) => {
+    send('draht:update-ready', { version: info.version });
+  });
 
-    if (response === 0) {
-      // isSilent=false so the NSIS installer still shows progress; isForceRunAfter
-      // relaunches the app once it finishes.
-      autoUpdater.quitAndInstall(false, true);
-    }
+  ipcMain.on('draht:install-update', () => {
+    // isSilent: true so the NSIS installer runs without showing its own progress window —
+    // the app has already told the user what is happening, and a second, unstyled window
+    // appearing on top of that is exactly what this replaces.
+    // isForceRunAfter: true relaunches once it finishes.
+    autoUpdater.quitAndInstall(true, true);
   });
 
   const check = () => {

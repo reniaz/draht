@@ -3,6 +3,7 @@ import { memo } from '../../lib/teact/teact';
 
 import DeletedLogModal from '../plugins/messageLogger/DeletedLogModal';
 import HistoryModal from '../plugins/messageLogger/HistoryModal';
+import UpdateModal from './UpdateModal';
 
 /**
  * Mount point for mod UI that has to live at the app root — modals, overlays, anything
@@ -20,6 +21,7 @@ const ModRoot: FC = () => (
   <>
     <HistoryModal />
     <DeletedLogModal />
+    <UpdateModal />
   </>
 );
 
