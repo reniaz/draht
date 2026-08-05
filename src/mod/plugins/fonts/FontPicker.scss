@@ -8,30 +8,55 @@
   }
 
   .draht-font-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
     padding: 0.4375rem 0.75rem;
     font-size: 1rem;
     line-height: 1.4;
     cursor: pointer;
-
-    // Long family names should not blow out the panel width.
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
 
     &:hover {
       background-color: var(--color-chat-hover);
     }
   }
 
+  .draht-font-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  // Selection is shown with a tick and a background, not by recolouring the text.
+  // Accent colours are frequently red-ish (caelus is), and coloured text in a list reads
+  // as an error rather than a choice.
   .draht-font-row-active {
-    color: var(--color-primary);
+    font-weight: var(--font-weight-medium, 500);
     background-color: var(--color-chat-hover);
   }
 
-  .draht-font-hint {
+  .draht-font-tick {
+    flex-shrink: 0;
+    color: var(--color-primary);
+  }
+
+  // The default sits above the system fonts and is separated from them.
+  .draht-font-row-default {
+    border-bottom: 1px solid var(--color-borders);
+  }
+
+  .draht-font-hint,
+  .draht-font-empty {
     margin: 0.5rem 0 0;
     font-size: 0.8125rem;
     color: var(--color-text-secondary);
+  }
+
+  .draht-font-empty {
+    padding: 0.75rem;
+    margin: 0;
+    text-align: center;
   }
 
   .draht-font-error {

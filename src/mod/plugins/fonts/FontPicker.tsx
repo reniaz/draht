@@ -62,30 +62,32 @@ const FontPicker: FC<OwnProps> = ({ value, setValue }) => {
 
       <div className="draht-font-list custom-scroll">
         <div
-          className={value ? 'draht-font-row' : 'draht-font-row draht-font-row-active'}
+          className={`draht-font-row draht-font-row-default${value ? '' : ' draht-font-row-active'}`}
           role="button"
           tabIndex={0}
           onClick={() => setValue('')}
         >
-          {DEFAULT_LABEL}
+          <span className="draht-font-name">{DEFAULT_LABEL}</span>
+          {!value && <span className="draht-font-tick">✓</span>}
         </div>
 
         {filtered.map((family) => (
           <div
             key={family}
-            className={family === value ? 'draht-font-row draht-font-row-active' : 'draht-font-row'}
+            className={`draht-font-row${family === value ? ' draht-font-row-active' : ''}`}
             // Teact takes `style` as a string.
             style={`font-family: "${family.replace(/"/g, '')}"`}
             role="button"
             tabIndex={0}
             onClick={() => setValue(family)}
           >
-            {family}
+            <span className="draht-font-name">{family}</span>
+            {family === value && <span className="draht-font-tick">✓</span>}
           </div>
         ))}
 
         {!isLoading && !filtered.length && families.length > 0 && (
-          <p className="draht-font-hint">{`No font matches "${query}".`}</p>
+          <p className="draht-font-empty">{`No font matches “${query}”`}</p>
         )}
       </div>
 

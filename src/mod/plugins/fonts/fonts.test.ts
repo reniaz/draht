@@ -65,17 +65,35 @@ describe('Fonts plugin', () => {
     expect(document.getElementById('draht-font')).toBeNull();
   });
 
-  it('covers message text when applyToMessages is on', async () => {
-    await bootWith({ Fonts: { enabled: true, fontFamily: 'Arial', applyToMessages: true } });
+  it('emits no per-area rules when every area is on', async () => {
+    await bootWith({ Fonts: { enabled: true, fontFamily: 'Arial' } });
 
-    expect(styleText()).toContain('.Message');
-  });
-
-  it('leaves message text alone when applyToMessages is off', async () => {
-    await bootWith({ Fonts: { enabled: true, fontFamily: 'Arial', applyToMessages: false } });
-
+    // All areas inherit the global --font-family; opt-outs are what generate rules.
     expect(styleText()).toContain('--font-family');
     expect(styleText()).not.toContain('.Message');
+    expect(styleText()).not.toContain('#LeftColumn');
+  });
+
+  it('reverts only the areas that are switched off', async () => {
+    await bootWith({
+      Fonts: {
+        enabled: true, fontFamily: 'Arial', applyToMessages: false, applyToChatList: false,
+      },
+    });
+
+    // The global rule stays, so untouched areas keep the font.
+    expect(styleText()).toContain('--font-family');
+    expect(styleText()).toContain('.Message');
+    expect(styleText()).toContain('#LeftColumn');
+    // Areas left on emit nothing.
+    expect(styleText()).not.toContain('.Composer');
+  });
+
+  it('reverts descendants too, not just the scope root', async () => {
+    await bootWith({ Fonts: { enabled: true, fontFamily: 'Arial', applyToMessages: false } });
+
+    // Descendants inherit a computed family rather than re-reading the variable.
+    expect(styleText()).toContain('.Message *');
   });
 
   it('does not let a font name break out of the CSS string', async () => {
