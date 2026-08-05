@@ -1,3 +1,5 @@
+import { callApi } from '../../../api/gramjs';
+
 import {
   blockApiMethod, interceptApiMethod, unblockAllForOwner, unblockApiMethod,
 } from '../../api/ApiGuard';
@@ -24,6 +26,60 @@ const READ_METHODS = [
   'readAllMentions',
   'readAllReactions',
 ];
+
+/**
+ * Requests Telegram treats as being active, which put you back online server-side.
+ *
+ * Rewriting the client's own "I am online" is not enough on its own: the server also marks
+ * you online for ordinary account activity, and sending a message is not accompanied by
+ * any status call the client could rewrite. You send a message, and you are online again
+ * until something else happens to say otherwise.
+ */
+const ACTIVITY_METHODS = [
+  'sendMessage',
+  'editMessage',
+  'forwardMessages',
+  'sendReaction',
+  'saveDraft',
+  'sendPollVote',
+];
+
+/** Re-assert after a burst of activity has settled rather than once per request. */
+const REASSERT_DELAY_MS = 1500;
+
+/**
+ * Bounds how long activity can leave you visible, for anything not in the list above.
+ *
+ * Matches the cadence Telegram clients use for their own online pings, so this is the same
+ * amount of traffic the client would produce anyway — with the opposite meaning.
+ */
+const HEARTBEAT_MS = 60_000;
+
+let heartbeat: number | undefined;
+let reassertTimer: number | undefined;
+
+function assertOffline() {
+  // Goes through the interceptor below, which pins the argument to false regardless.
+  void Promise.resolve(callApi('updateIsOnline', false)).catch(() => {
+    // Offline is asserted again on the next heartbeat; a failed one is not worth surfacing.
+  });
+}
+
+function scheduleReassert() {
+  if (reassertTimer) self.clearTimeout(reassertTimer);
+
+  reassertTimer = self.setTimeout(() => {
+    reassertTimer = undefined;
+    assertOffline();
+  }, REASSERT_DELAY_MS);
+}
+
+function stopAsserting() {
+  if (heartbeat) self.clearInterval(heartbeat);
+  if (reassertTimer) self.clearTimeout(reassertTimer);
+  heartbeat = undefined;
+  reassertTimer = undefined;
+}
 
 const settings = definePluginSettings({
   hideTyping: {
@@ -71,8 +127,23 @@ function apply() {
       // active use produces constantly. Appearing offline requires actively saying so, so
       // every "I am online" is turned into "I am offline".
       interceptApiMethod(OWNER, 'updateIsOnline', () => [false]);
+
+      // Watch, do not change: the request goes out untouched and offline is re-asserted
+      // once it has settled.
+      for (const method of ACTIVITY_METHODS) {
+        interceptApiMethod(OWNER, method, (args) => {
+          scheduleReassert();
+          return args;
+        });
+      }
+
+      stopAsserting();
+      assertOffline();
+      heartbeat = self.setInterval(assertOffline, HEARTBEAT_MS);
     } else {
+      stopAsserting();
       unblockApiMethod(OWNER, 'updateIsOnline');
+      for (const method of ACTIVITY_METHODS) unblockApiMethod(OWNER, method);
     }
   } catch (err) {
     logger.error('failed to apply', err);
@@ -95,6 +166,7 @@ export default definePlugin({
   },
 
   stop() {
+    stopAsserting();
     unblockAllForOwner(OWNER);
   },
 });

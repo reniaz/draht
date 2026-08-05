@@ -1,8 +1,18 @@
 import {
-  beforeEach, describe, expect, it, vi,
+  afterEach, beforeEach, describe, expect, it, vi,
 } from 'vitest';
 
+// The plugin asserts offline through the real API entry point. Recording the calls is the
+// only way to test the part that broke: the assertion has to happen at all, and at the
+// right moments.
+const { calls } = vi.hoisted(() => ({ calls: [] as any[][] }));
 
+vi.mock('../../../api/gramjs', () => ({
+  callApi: (...args: any[]) => {
+    calls.push(args);
+    return Promise.resolve(undefined);
+  },
+}));
 
 const STORAGE_KEY = 'draht-settings';
 
@@ -98,5 +108,85 @@ describe('ApiGuard ownership', () => {
 
     unblockApiMethod('PluginB', 'someMethod');
     expect(isBlocked('someMethod')).toBe(false);
+  });
+});
+
+describe('staying offline through activity', () => {
+  beforeEach(() => {
+    calls.length = 0;
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('asserts offline as soon as it starts', async () => {
+    await bootWith({ GhostMode: { enabled: true } });
+
+    expect(calls).toContainEqual(['updateIsOnline', false]);
+  });
+
+  it('re-asserts offline after a message is sent', async () => {
+    // The reported symptom: texting someone put you back online. Sending carries no
+    // status call to rewrite, so the only answer is to say it again afterwards.
+    const { api } = await bootWith({ GhostMode: { enabled: true } });
+    calls.length = 0;
+
+    const args = api.interceptApiCall('sendMessage', [{ text: 'hi' }]);
+
+    // The request itself must go out exactly as it was.
+    expect(args).toEqual([{ text: 'hi' }]);
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(calls).toContainEqual(['updateIsOnline', false]);
+  });
+
+  it('coalesces a burst of activity into one assertion', async () => {
+    const { api } = await bootWith({ GhostMode: { enabled: true } });
+    calls.length = 0;
+
+    api.interceptApiCall('sendMessage', [{ text: 'a' }]);
+    api.interceptApiCall('sendMessage', [{ text: 'b' }]);
+    api.interceptApiCall('sendReaction', [{}]);
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(calls).toHaveLength(1);
+  });
+
+  it('keeps asserting on a heartbeat, for activity it cannot see', async () => {
+    await bootWith({ GhostMode: { enabled: true } });
+    calls.length = 0;
+
+    await vi.advanceTimersByTimeAsync(185_000);
+
+    // Three minutes, one assertion a minute.
+    expect(calls).toHaveLength(3);
+  });
+
+  it('asserts nothing while the switch is off', async () => {
+    const { api } = await bootWith({
+      GhostMode: { enabled: true, hideOnlineStatus: false },
+    });
+    calls.length = 0;
+
+    api.interceptApiCall('sendMessage', [{ text: 'hi' }]);
+    await vi.advanceTimersByTimeAsync(185_000);
+
+    expect(calls).toHaveLength(0);
+  });
+
+  it('stops the heartbeat when the plugin stops', async () => {
+    const { plugin } = await bootWith({ GhostMode: { enabled: true } });
+    const { stopPlugin } = await import('../../api/PluginManager');
+
+    stopPlugin(plugin);
+    calls.length = 0;
+
+    await vi.advanceTimersByTimeAsync(185_000);
+
+    expect(calls).toHaveLength(0);
   });
 });
