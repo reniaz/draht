@@ -23,6 +23,38 @@ const settings = definePluginSettings({
 
 let originalFocus: typeof window.focus | undefined;
 let OriginalNotification: typeof Notification | undefined;
+let originalShowNotification: unknown;
+
+/**
+ * Makes telegram-tt use the notification API that actually works in Electron.
+ *
+ * Electron implements the `Notification` constructor but **not**
+ * `ServiceWorkerRegistration.showNotification` — calling it neither displays anything nor
+ * rejects; it simply never resolves.
+ *
+ * Upstream feature-detects by checking whether that method exists on the prototype. It
+ * does exist, so `checkIfPushSupported()` returns true and `notifyAboutMessage` posts to
+ * the service worker instead of constructing a Notification — and that branch has no
+ * fallback, so every message notification is silently dropped.
+ *
+ * Removing the method makes the detection fail, so upstream takes the `new Notification`
+ * path, which works. Nothing is lost: the service-worker path was already doing nothing,
+ * and web push has no meaning for a desktop build.
+ */
+function preferDirectNotifications() {
+  const proto = ServiceWorkerRegistration.prototype as any;
+  if (!('showNotification' in proto)) return;
+
+  originalShowNotification = proto.showNotification;
+  delete proto.showNotification;
+}
+
+function restoreServiceWorkerNotifications() {
+  if (!originalShowNotification) return;
+
+  (ServiceWorkerRegistration.prototype as any).showNotification = originalShowNotification;
+  originalShowNotification = undefined;
+}
 
 /**
  * Makes desktop notifications behave like a desktop app's.
@@ -42,17 +74,21 @@ let OriginalNotification: typeof Notification | undefined;
 export default definePlugin({
   name: 'DesktopNotifications',
   description:
-    'Makes notifications behave like a desktop app: clicking one opens Draht, and new '
-    + 'messages flash the taskbar.',
+    'Makes notifications work and behave like a desktop app: clicking one opens Draht, '
+    + 'and new messages flash the taskbar.',
   authors: ['Draht'],
   enabledByDefault: true,
 
   settings,
 
   start() {
+    // Runs before upstream's first notification, because plugins start from
+    // src/mod/init.ts which is imported ahead of ./global/init.
+    preferDirectNotifications();
+
     const native = window.draht;
     if (!native) {
-      logger.info('not running in the desktop shell; nothing to do');
+      logger.info('not running in the desktop shell; direct notifications only');
       return;
     }
 
@@ -78,6 +114,8 @@ export default definePlugin({
   },
 
   stop() {
+    restoreServiceWorkerNotifications();
+
     if (originalFocus) {
       window.focus = originalFocus;
       originalFocus = undefined;

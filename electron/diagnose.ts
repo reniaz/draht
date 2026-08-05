@@ -48,6 +48,14 @@ void app.whenReady().then(async () => {
 
   // First load, just to get an origin we can write localStorage on.
   await win.loadURL(`${baseUrl}index.html`);
+
+  // What the real app sees: one load, under a path prefix never used before.
+  await new Promise((r) => { setTimeout(r, 6000); });
+  const firstLoad = await win.webContents.executeJavaScript(
+    `({ hasController: Boolean(navigator.serviceWorker.controller), path: location.pathname })`,
+  );
+  console.log('\n--- first load under a fresh prefix (what the app actually does) ---');
+  console.log(JSON.stringify(firstLoad, undefined, 2));
   await win.webContents.executeJavaScript(
     `localStorage.setItem('draht-settings', ${JSON.stringify(SETTINGS)}); true`,
   );
@@ -79,6 +87,40 @@ void app.whenReady().then(async () => {
     try { new Notification('Draht test'); shown = true; } catch (e) { shown = 'threw: ' + e.message; }
     return { supported: true, before, afterRequest, canConstruct: shown };
   })()`);
+
+  const sw = await win.webContents.executeJavaScript(`(async () => {
+    if (!('serviceWorker' in navigator)) return { supported: false };
+    const regs = await navigator.serviceWorker.getRegistrations();
+    return {
+      supported: true,
+      // The branch that decides push-vs-direct notifications.
+      pushSupported: 'showNotification' in ServiceWorkerRegistration.prototype,
+      // If this is null while pushSupported is true, notifications are dropped silently.
+      hasController: Boolean(navigator.serviceWorker.controller),
+      registrations: regs.map((r) => ({
+        scope: r.scope,
+        active: Boolean(r.active),
+        state: r.active?.state,
+      })),
+    };
+  })()`);
+
+  console.log('\n--- service worker (decides notification path) ---');
+  console.log(JSON.stringify(sw, undefined, 2));
+
+  // Mirrors upstream's `checkIfPushSupported()`. When this is true, notifications are
+  // routed to the service worker — whose showNotification never resolves in Electron, so
+  // they vanish. The DesktopNotifications plugin removes the method to force the direct
+  // path, so this must read false once the mod has started.
+  const notifyPath = await win.webContents.executeJavaScript(`({
+    pushBranchTaken: 'showNotification' in ServiceWorkerRegistration.prototype,
+  })`);
+
+  console.log('\n--- which notification path upstream will take ---');
+  console.log(JSON.stringify(notifyPath, undefined, 2));
+  console.log(notifyPath.pushBranchTaken
+    ? '  service worker  <-- silently drops notifications in Electron'
+    : '  direct Notification  <-- works');
 
   console.log('\n--- notifications ---');
   console.log(JSON.stringify(notifications, undefined, 2));
