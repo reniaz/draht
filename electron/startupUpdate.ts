@@ -3,7 +3,7 @@ import { autoUpdater } from 'electron-updater';
 import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { showSplash } from './splash';
+import { type Splash, showSplash } from './splash';
 
 /**
  * Checks for, downloads and installs updates at launch, behind a splash screen.
@@ -21,6 +21,47 @@ import { showSplash } from './splash';
 
 /** Beyond this, start the app and leave the update for next time. */
 const CHECK_TIMEOUT_MS = 8000;
+
+/**
+ * The splash outlives this module's work on purpose.
+ *
+ * It is the only window during the update check, and closing it before the main window
+ * exists leaves Electron with zero windows — which fires `window-all-closed` and quits the
+ * app mid-launch. The caller closes it once the main window is up, so the two overlap.
+ */
+let splash: Splash | undefined;
+
+export function closeStartupSplash() {
+  splash?.close();
+  splash = undefined;
+}
+
+export function setStartupStatus(text: string) {
+  splash?.setStatus(text);
+}
+
+/**
+ * Whether `candidate` is a higher version than `current`.
+ *
+ * Numeric segments compared left to right, missing segments treated as 0, and any
+ * pre-release suffix ignored — the release feed only ever carries plain `x.y.z`, and a
+ * comparison that guesses at more than it has to is a comparison that can be wrong in a
+ * way nobody notices until an update silently stops arriving.
+ */
+export function isNewerVersion(candidate: string, current: string): boolean {
+  const parse = (value: string) => value.split('-')[0].split('.').map((part) => Number(part) || 0);
+
+  const a = parse(candidate);
+  const b = parse(current);
+
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const left = a[i] ?? 0;
+    const right = b[i] ?? 0;
+    if (left !== right) return left > right;
+  }
+
+  return false;
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number) {
   return Promise.race([
@@ -73,11 +114,14 @@ export function cleanUpdaterCache() {
  * @returns true when an install is starting, so the caller must not open the main window.
  */
 export async function runStartupUpdate(iconPath: string): Promise<boolean> {
-  if (!app.isPackaged) return false;
+  // The splash and this whole path only exist in a packaged app. DRAHT_FORCE_SPLASH opens
+  // it anyway, so `mod:check:app` can exercise the launch ordering — which is where it
+  // broke once, invisibly, because an unpackaged check returns here and never sees it.
+  if (!app.isPackaged && !process.env.DRAHT_FORCE_SPLASH) return false;
 
   cleanUpdaterCache();
 
-  const splash = showSplash(iconPath);
+  splash = showSplash(iconPath);
 
   try {
     autoUpdater.autoDownload = false;
@@ -86,21 +130,28 @@ export async function runStartupUpdate(iconPath: string): Promise<boolean> {
     const result = await withTimeout(autoUpdater.checkForUpdates(), CHECK_TIMEOUT_MS);
     const version = result?.updateInfo?.version;
 
-    if (!version || version === app.getVersion()) {
-      splash.close();
+    // `updateInfo.version` is whatever the feed's latest release is, present or not — it
+    // is not a claim that an update applies. Testing it for inequality treats a *newer*
+    // local build as an update, and `downloadUpdate()` then throws "Please check update
+    // first". Only a genuinely higher version is an update.
+    if (!version || !isNewerVersion(version, app.getVersion())) {
+      // Left open, and left saying something true, until the main window takes over.
+      splash?.setStatus('Starting Draht…');
       return false;
     }
 
-    splash.setStatus(`Downloading ${version}…`);
+    const shown = splash;
+
+    shown.setStatus(`Downloading ${version}…`);
     autoUpdater.on('download-progress', (progress) => {
-      splash.setProgress(progress.percent);
-      splash.setStatus(`Downloading ${version}… ${Math.round(progress.percent)}%`);
+      shown.setProgress(progress.percent);
+      shown.setStatus(`Downloading ${version}… ${Math.round(progress.percent)}%`);
     });
 
     await autoUpdater.downloadUpdate();
 
-    splash.setProgress(100);
-    splash.setStatus(`Installing ${version}…`);
+    shown.setProgress(100);
+    shown.setStatus(`Installing ${version}…`);
 
     // Give the splash a moment to paint the final state before the installer takes over.
     await new Promise((resolve) => { setTimeout(resolve, 400); });
@@ -109,7 +160,7 @@ export async function runStartupUpdate(iconPath: string): Promise<boolean> {
     autoUpdater.quitAndInstall(true, true);
     return true;
   } catch {
-    splash.close();
+    splash?.setStatus('Starting Draht…');
     return false;
   }
 }

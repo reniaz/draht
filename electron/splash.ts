@@ -15,6 +15,7 @@ function buildHtml(iconPath: string) {
 
   return `<!doctype html>
 <meta charset="utf-8">
+<title>Draht</title>
 <style>
   :root { color-scheme: dark; }
   body {
@@ -63,6 +64,11 @@ export function showSplash(iconPath: string): Splash {
   const win = new BrowserWindow({
     width: 380,
     height: 132,
+    // The window is frameless, so this is what the taskbar and Alt-Tab show. Without
+    // them the first thing a user sees of Draht is an Electron icon labelled with a
+    // data URL.
+    title: 'Draht',
+    icon: existsSync(iconPath) ? iconPath : undefined,
     frame: false,
     resizable: false,
     movable: true,

@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 
 import { startWebServer, type WebServer } from './server';
 import { initThemes } from './themes';
-import { runStartupUpdate } from './startupUpdate';
+import { closeStartupSplash, runStartupUpdate } from './startupUpdate';
 import { initUpdater } from './updater';
 import { initWindowControls } from './windowControls';
 
@@ -26,10 +26,22 @@ const ICON = resolve(
   process.platform === 'win32' ? `icon-${ICON_VARIANT}.ico` : `icon-${ICON_VARIANT}-512.png`,
 );
 
+/** Backstop for closing the splash if the web app never reports itself ready. */
+const SPLASH_TIMEOUT_MS = 30_000;
+
 const DEV_URL = process.env.MOD_DEV_URL;
 const IS_DEV = Boolean(DEV_URL);
 
 let webServer: WebServer | undefined;
+
+/**
+ * Whether the main window has been created yet.
+ *
+ * Until it has, the splash is the only window, and letting `window-all-closed` quit in
+ * that state is fatal: closing the splash would end the launch. This shipped once — the
+ * splash appeared for a second and the app exited with status 0, no window, no error.
+ */
+let hasMainWindow = false;
 
 /**
  * Reports a fatal startup problem and quits.
@@ -80,7 +92,12 @@ function createWindow(startUrl: string, appOrigin: string) {
     },
   });
 
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => {
+    win.show();
+    // Same handler as the show, deliberately: the splash exists to cover the gap before
+    // this moment, and two separate listeners are two things that can drift apart.
+    closeStartupSplash();
+  });
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     openExternally(url);
@@ -151,6 +168,11 @@ if (!app.requestSingleInstanceLock()) {
     if (await runStartupUpdate(ICON)) return;
 
     const mainWindow = createWindow(startUrl, appOrigin);
+    hasMainWindow = true;
+
+    // Backstop only — the splash normally goes when the window is shown. If the web app
+    // never gets that far, the splash still must not sit on the user's screen forever.
+    setTimeout(closeStartupSplash, SPLASH_TIMEOUT_MS);
 
     const currentWindow = () => (mainWindow.isDestroyed()
       ? BrowserWindow.getAllWindows()[0]
@@ -169,6 +191,8 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.on('window-all-closed', () => {
+    // Mid-launch there is only the splash, and its closing must not end the app.
+    if (!hasMainWindow) return;
     if (process.platform !== 'darwin') app.quit();
   });
 
