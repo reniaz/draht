@@ -49,7 +49,8 @@
     "postinstall": "node -e \"require('fs').rmSync('.cache', { recursive: true, force: true })\"",
     "postversion": "echo $(node -p \"require('./package.json').version\") > public/version.txt && git commit --amend --no-verify --no-edit public/version.txt",
     "mod:secrets": "node tools/check-secrets.mjs",
-    "mod:secrets:install": "node tools/install-hook.mjs"
+    "mod:secrets:install": "node tools/install-hook.mjs",
+    "mod:release": "npm run mod:build && electron-builder --win nsis --publish always"
   },
   "engines": {
     "node": "^24.11 || ^26",
@@ -86,6 +87,7 @@
     "cross-env": "^10.1.0",
     "electron": "^43.2.0",
     "electron-builder": "^26.15.3",
+    "electron-updater": "^6.8.9",
     "eslint": "^10.6.0",
     "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-import-x": "^4.17.0",

@@ -42,10 +42,23 @@ const ALLOWLIST = {
   'vite.config.ts': 18,
   // Regenerated wholesale by npm; reviewing its line count is meaningless.
   'package-lock.json': Infinity,
+
+  // The fork has its own identity. Upstream's README is preserved verbatim as
+  // README.upstream.md rather than dropped, since it carries the dependency licences.
+  'README.md': Infinity,
 };
 
 /** Paths that belong to the mod rather than upstream. */
-const OURS = [/^src\/mod\//, /^electron\//, /^tools\//, /^vitest\.mod\.config\.ts$/];
+const OURS = [
+  /^src\/mod\//,
+  /^electron\//,
+  /^tools\//,
+  /^vitest\.mod\.config\.ts$/,
+  /^electron-builder\.yml$/,
+  /^README\.mod\.md$/,
+  // Upstream's README, preserved verbatim under a new name.
+  /^README\.upstream\.md$/,
+];
 
 /**
  * Upstream commits its build output, and any local build rewrites it. That churn is not
@@ -59,7 +72,9 @@ function git(...args) {
 
 let numstat;
 try {
-  numstat = git('diff', '--numstat', BASE);
+  // `--no-renames` so a rename reports as a delete plus an add. With detection on, git
+  // emits a single `old => new` path that no per-file rule can match.
+  numstat = git('diff', '--numstat', '--no-renames', BASE);
 } catch {
   console.error(
     `Could not diff against '${BASE}'.\n`

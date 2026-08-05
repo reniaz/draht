@@ -2,6 +2,18 @@ appId: dev.draht.client
 productName: Draht
 copyright: GPL-3.0-or-later
 
+# Where installed copies look for updates. Declaring this makes electron-builder write an
+# `app-update.yml` into the packaged resources, which is what electron-updater reads at
+# runtime — so the feed URL is never hardcoded in the app.
+#
+# Publishing uploads the installer plus a `latest.yml` manifest to a GitHub Release.
+# `npm run mod:release` does that and needs GH_TOKEN set.
+publish:
+  provider: github
+  owner: reniaz
+  repo: draht
+  releaseType: release
+
 directories:
   output: release
   buildResources: electron/assets

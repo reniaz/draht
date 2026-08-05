@@ -1,56 +1,183 @@
-# Telegram Web A
+<div align="center">
 
-This project won the first prize 🥇 at [Telegram Lightweight Client Contest](https://contest.com/javascript-web-3) and now is an official Telegram client available to anyone at [web.telegram.org/a](https://web.telegram.org/a).
+<img src="electron/assets/icon-wire-256.png" width="120" alt="Draht">
 
-According to the original contest rules, it has nearly zero dependencies and is fully based on its own [Teact](https://github.com/Ajaxy/teact) framework (which re-implements React paradigm). It also uses a custom version of [GramJS](https://github.com/gram-js/gramjs) as an MTProto implementation.
+# Draht
 
-The project incorporates lots of technologically advanced features, modern Web APIs and techniques: WebSockets, Web Workers and WebAssembly, multi-level caching and PWA, voice recording and media streaming, cryptography and raw binary data operations, optimistic and progressive interfaces, complicated CSS/Canvas/SVG animations, reactive data streams, and so much more.
+**A Telegram desktop client with a plugin system.**
 
-Feel free to explore, provide feedback and contribute.
+A fork of [telegram-tt](https://github.com/Ajaxy/telegram-tt) (Telegram Web A) wrapped in
+an Electron shell — in the spirit of [Vencord](https://github.com/Vendicated/Vencord).
 
-## Local setup
+*Draht* is German for "wire".
 
-```sh
-mv .env.example .env
+</div>
 
-npm i
+---
+
+## Features
+
+### MessageLogger
+
+Deleted messages don't disappear. They stay in the conversation, marked in red, so you can
+still read what was said.
+
+- **Works in every chat type** — channels, groups, and private chats
+- **Edit history** — every previous version of an edited message, with timestamps
+- **Manual control** — purge a single message, clear a whole chat's log, or exclude
+  specific people and chats from logging entirely
+- **Survives restarts** — with configurable retention limits so it can't grow forever
+- **Secret chats are never logged**, by default. They carry an end-to-end promise that
+  ordinary chats don't.
+
+### Themes
+
+Recolour the entire client. Ships with **caelus** (warm, muted, dark), and you can build
+your own from ten colours in a picker — everything else is derived from those, so hover
+states, tints and borders stay consistent automatically.
+
+- Built-in colour picker; no config files to hand-edit
+- Brightness dial for lightening any theme
+- Import any [Zed](https://zed.dev) editor theme as a starting point
+
+### HideSponsored
+
+Hides sponsored messages (ads) in channels.
+
+### Plugin system
+
+Every feature above is a plugin. Writing one is a folder with an `index.tsx`:
+
+```tsx
+export default definePlugin({
+  name: 'MyPlugin',
+  description: 'Does something useful.',
+  settings,
+  seams: {
+    messageClassNames: (message) => (message.isOutgoing ? 'my-class' : undefined),
+  },
+  start() { /* ... */ },
+});
 ```
 
-Obtain API ID and API hash on [my.telegram.org](https://my.telegram.org) and populate the `.env` file.
+No registration step — the build discovers it. The settings UI is generated from whatever
+options you declare, and plugins enable and disable instantly without a restart.
 
-## Dev mode
+---
 
-```sh
-npm run dev
+## Install
+
+Download the latest `Draht-Setup-*.exe` from
+[Releases](https://github.com/reniaz/draht/releases) and run it.
+
+The build is unsigned, so Windows SmartScreen warns on first launch — click
+**More info → Run anyway**.
+
+Draht updates itself: it checks for new releases on launch and offers to restart when one
+is ready.
+
+> **You don't need Telegram API credentials to use Draht.** Install it and log in with your
+> phone number, exactly like the official client.
+
+Windows x64 only for now. macOS and Linux are configured but unbuilt.
+
+---
+
+## Building from source
+
+Requires Node `^24.11 || ^26` and npm 11+.
+
+```bash
+git clone https://github.com/reniaz/draht.git
+cd draht
+npm install
+npm run mod:secrets:install
 ```
 
-### Invoking API from console
+Get an `api_id` and `api_hash` from [my.telegram.org](https://my.telegram.org) →
+*API development tools*, then create `.env`:
 
-Start your dev server and locate GramJS worker in the console context.
-
-All constructors and functions available in global `GramJs` variable.
-
-Run `npm run gramjs:tl full` to get access to all available Telegram methods.
-
-Example usage:
-``` javascript
-await invoke(new GramJs.help.GetAppConfig())
+```
+TELEGRAM_API_ID=1234567
+TELEGRAM_API_HASH=your_hash_here
+APP_TITLE=Draht
+APP_NAME=Draht
+BASE_URL=https://web.telegram.org/a/
 ```
 
-### Dependencies
-* [GramJS](https://github.com/gram-js/gramjs) ([MIT License](https://github.com/gram-js/gramjs/blob/master/LICENSE))
-* [fflate](https://github.com/101arrowz/fflate) ([MIT License](https://github.com/101arrowz/fflate/blob/master/LICENSE))
-* [cryptography](https://github.com/spalt08/cryptography) ([Apache License 2.0](https://github.com/spalt08/cryptography/blob/master/LICENSE))
-* [emoji-data](https://github.com/iamcal/emoji-data) ([MIT License](https://github.com/iamcal/emoji-data/blob/master/LICENSE))
-* [twemoji-parser](https://github.com/jdecked/twemoji-parser) ([MIT License](https://github.com/jdecked/twemoji-parser/blob/master/LICENSE.md))
-* [rlottie](https://github.com/Samsung/rlottie) ([MIT License](https://github.com/Samsung/rlottie/blob/master/COPYING))
-* [opus-recorder](https://github.com/chris-rudmin/opus-recorder) ([Various Licenses](https://github.com/chris-rudmin/opus-recorder/blob/master/LICENSE.md))
-* [qr-code-styling](https://github.com/kozakdenys/qr-code-styling) ([MIT License](https://github.com/kozakdenys/qr-code-styling/blob/master/LICENSE))
-* [music-metadata](https://github.com/Borewit/music-metadata) ([MIT License](https://github.com/Borewit/music-metadata/blob/master/LICENSE.txt))
-* [lowlight](https://github.com/wooorm/lowlight) ([MIT License](https://github.com/wooorm/lowlight/blob/main/license))
-* [idb-keyval](https://github.com/jakearchibald/idb-keyval) ([Apache License 2.0](https://github.com/jakearchibald/idb-keyval/blob/main/LICENCE))
-* [fasttextweb](https://github.com/karmdesai/fastTextWeb)
-* fastblur
+Those identify *the application* to Telegram, not you — every Telegram client has its own
+pair. They get compiled into the build, which is why people installing the `.exe` never
+need them.
 
-## Bug reports and Suggestions
-If you find an issue with this app, let Telegram know using the [Suggestions Platform](https://bugs.telegram.org/c/4002).
+| Command | |
+|---|---|
+| `npm run mod:dev` | Dev server + Electron with DevTools |
+| `npm run mod:start` | Run the built app |
+| `npm run mod:build` | Build the web app and the shell |
+| `npm run mod:package` | Build a Windows installer into `release/` |
+| `npm run mod:release` | Build and publish a GitHub Release (needs `GH_TOKEN`) |
+| `npm run mod:verify` | Typecheck, tests, and the upstream diff budget |
+
+Architecture and contributor notes live in **[README.mod.md](README.mod.md)** — how the
+plugin system hooks into upstream, and how to rebase onto new telegram-tt releases.
+
+---
+
+## How it works
+
+Vencord patches Discord's webpack module factories at runtime. That has no equivalent
+here: telegram-tt ships as native ESM with no module registry to hook. So Draht is a
+**fork** with the plugin layer compiled in, through named extension points called *seams*.
+
+The rule is one import plus one expression per upstream call site, enforced by
+`npm run mod:diff`, which fails if the footprint grows. Currently **14 upstream files,
+largest 9 lines** — that's what keeps rebasing onto new telegram-tt releases a mechanical
+operation rather than a rewrite.
+
+The app is served over a loopback origin rather than `file://` (which blocks Web Workers
+and breaks IndexedDB persistence) or a custom protocol (which silently breaks the Cache
+API that all media caching depends on).
+
+---
+
+## Status
+
+Early. This is a personal project rather than a polished product — expect rough edges, and
+open an issue if you hit one.
+
+Not yet implemented: inline edit history under messages (it's currently in a modal),
+collapsing runs of consecutive deleted messages, and ignore-lists by folder.
+
+---
+
+## Privacy
+
+Everything Draht records stays on your machine. No telemetry, no analytics, no server of
+its own — it talks only to Telegram, exactly as the official client does. The message log
+lives in local storage on your computer and is never transmitted anywhere.
+
+Persistence disables itself automatically when a Telegram passcode is set, because
+Telegram encrypts its own cached data behind that passcode and Draht's log sits outside
+it.
+
+Worth saying plainly: this client keeps messages other people chose to delete. That's the
+point of it, but it's worth knowing what you're running.
+
+---
+
+## Credits
+
+Built on [telegram-tt](https://github.com/Ajaxy/telegram-tt) by Alexander Zinchuk — Draht
+is a fork of it and wouldn't exist otherwise. Upstream's own README, including the full
+dependency licence list, is preserved at [README.upstream.md](README.upstream.md).
+
+Plugin architecture inspired by [Vencord](https://github.com/Vendicated/Vencord). The
+bundled *caelus* theme is ported from the Zed theme of the same name by **dacctal**.
+
+## Licence
+
+[GPL-3.0-or-later](LICENSE), inherited from telegram-tt. If you distribute builds, you must
+make your source available.
+
+Third-party Telegram clients are explicitly permitted — the MTProto API is public, and
+registering your own `api_id` is the supported path.

@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { startWebServer, type WebServer } from './server';
+import { initUpdater } from './updater';
 
 const DIR_NAME = dirname(fileURLToPath(import.meta.url));
 
@@ -141,7 +142,11 @@ if (!app.requestSingleInstanceLock()) {
       appOrigin = webServer.origin;
     }
 
-    createWindow(startUrl, appOrigin);
+    const mainWindow = createWindow(startUrl, appOrigin);
+
+    initUpdater(() => (mainWindow.isDestroyed()
+      ? BrowserWindow.getAllWindows()[0]
+      : mainWindow));
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow(startUrl, appOrigin);
