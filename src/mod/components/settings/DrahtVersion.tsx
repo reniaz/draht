@@ -1,6 +1,8 @@
 import type { FC } from '../../../lib/teact/teact';
 import { memo, useEffect, useRef, useState } from '../../../lib/teact/teact';
 
+import { offsetToFillHeight } from './freeSpace';
+
 import './DrahtVersion.scss';
 
 const SCROLLER_SELECTOR = '.settings-content, .settings-main-scroll';
@@ -53,9 +55,19 @@ const DrahtVersion: FC = () => {
     // the alternative, a flex column, would change how every settings screen is laid out
     // for the sake of one decorative line.
     const place = () => {
-      node.style.marginTop = '0px';
-      const free = scroller.clientHeight - scroller.scrollHeight;
-      if (free > 0) node.style.marginTop = `${free}px`;
+      const currentOffset = parseFloat(node.style.marginTop) || 0;
+
+      const offset = offsetToFillHeight({
+        containerBottom: scroller.getBoundingClientRect().bottom,
+        containerPaddingBottom: parseFloat(getComputedStyle(scroller).paddingBottom) || 0,
+        contentBottom: node.getBoundingClientRect().bottom,
+        scrollTop: scroller.scrollTop,
+        currentOffset,
+      });
+
+      // Writing an unchanged value would still be a write, and the observers below would
+      // see it. Once placed, the measurement is stable, so this settles after one pass.
+      if (offset !== currentOffset) node.style.marginTop = `${offset}px`;
     };
 
     place();
