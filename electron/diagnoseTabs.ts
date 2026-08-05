@@ -54,6 +54,15 @@ void app.whenReady().then(async () => {
     column.id = 'MiddleColumn';
     const bar = document.createElement('div');
     bar.className = 'draht-tabbar';
+    // With a tab in it: the bar's height comes from its content, so an empty probe
+    // measures 0 and says nothing about whether the rules loaded.
+    const scroll = document.createElement('div');
+    scroll.className = 'draht-tabbar-scroll';
+    const tab = document.createElement('div');
+    tab.className = 'draht-tab';
+    tab.textContent = 'Chat';
+    scroll.appendChild(tab);
+    bar.appendChild(scroll);
     column.appendChild(bar);
     document.body.appendChild(column);
 
@@ -63,6 +72,9 @@ void app.whenReady().then(async () => {
       bodyClass: document.body.classList.contains('draht-has-tabs'),
       barHeight: barStyle.height,
       barVisible: barStyle.display !== 'none',
+      // Styled as an island, like the header it sits above.
+      tabRadius: getComputedStyle(tab).borderRadius,
+      tabShadow: getComputedStyle(tab).boxShadow !== 'none',
       columnIsFlexColumn: columnStyle.display === 'flex' && columnStyle.flexDirection === 'column',
       // Upstream's header metrics must be untouched: enlarging them inflated the header
       // island the first time round.
@@ -80,6 +92,8 @@ void app.whenReady().then(async () => {
   const ok = report.bodyClass
     && report.barVisible
     && report.barHeight !== '0px'
+    && report.tabRadius !== '0px'
+    && report.tabShadow
     && report.columnIsFlexColumn
     && report.headerHeight === '3rem';
 

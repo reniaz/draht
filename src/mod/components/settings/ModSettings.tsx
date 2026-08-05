@@ -49,13 +49,6 @@ const ModSettings: FC<OwnProps> = ({ screen, isActive, onReset }) => {
   return (
     <div className="settings-content custom-scroll draht-settings">
       <ListItem
-        icon="settings"
-        narrow
-        onClick={() => openSettingsScreen({ screen: SettingsScreens.ModGeneral })}
-      >
-        General
-      </ListItem>
-      <ListItem
         icon="brush"
         narrow
         onClick={() => openSettingsScreen({ screen: SettingsScreens.ModTheme })}
@@ -68,6 +61,13 @@ const ModSettings: FC<OwnProps> = ({ screen, isActive, onReset }) => {
         onClick={() => openSettingsScreen({ screen: SettingsScreens.ModPluginList })}
       >
         Plugins
+      </ListItem>
+      <ListItem
+        icon="settings"
+        narrow
+        onClick={() => openSettingsScreen({ screen: SettingsScreens.ModGeneral })}
+      >
+        General
       </ListItem>
     </div>
   );
