@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 
 /**
  * Window behaviour the renderer cannot perform itself.
@@ -9,6 +9,12 @@ import { BrowserWindow, ipcMain } from 'electron';
  * raising has to happen in the main process.
  */
 export function initWindowControls(getWindow: () => BrowserWindow | undefined) {
+  // The version of the app that is actually running, which is the honest answer for an
+  // install. Unpackaged there is no installed version to report — `app.getVersion()` finds
+  // no app manifest and answers with Electron's own version — so the renderer is left to
+  // fall back to the constant baked in at build time.
+  ipcMain.handle('draht:app-version', () => (app.isPackaged ? app.getVersion() : undefined));
+
   ipcMain.on('draht:focus-window', () => {
     const window = getWindow();
     if (!window || window.isDestroyed()) return;

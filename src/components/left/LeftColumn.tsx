@@ -192,8 +192,18 @@ function LeftColumn({
         case SettingsScreens.Language:
         case SettingsScreens.Stickers:
         case SettingsScreens.Experimental:
+        // #region mod
+        case SettingsScreens.ModPlugins:
+          // #endregion mod
           openSettingsScreen({ screen: SettingsScreens.Main });
           return;
+
+        // #region mod
+        case SettingsScreens.ModTheme:
+        case SettingsScreens.ModPluginList:
+          openSettingsScreen({ screen: SettingsScreens.ModPlugins });
+          return;
+        // #endregion mod
 
         case SettingsScreens.GeneralChatBackground:
           openSettingsScreen({ screen: SettingsScreens.General });

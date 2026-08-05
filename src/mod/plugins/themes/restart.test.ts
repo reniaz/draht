@@ -51,10 +51,13 @@ describe('themes survive a restart', () => {
     expect(style!.textContent).toContain('!important');
   });
 
-  it('applies nothing when the plugin was left disabled', async () => {
-    await bootWith({ Themes: { enabled: false, theme: 'caelus' } });
+  it('starts even if an old setting says it was disabled', async () => {
+    const plugin = await bootWith({ Themes: { enabled: false, theme: 'caelus' } });
 
-    expect(document.getElementById('draht-theme')).toBeNull();
+    // Themes is `required`: "Default" in the theme list is what turns colouring off, so a
+    // stale disabled flag must not leave a chosen theme silently doing nothing.
+    expect(plugin.started).toBe(true);
+    expect(document.getElementById('draht-theme')).not.toBeNull();
   });
 
   it('applies nothing when the theme is off', async () => {
@@ -63,16 +66,13 @@ describe('themes survive a restart', () => {
     expect(document.getElementById('draht-theme')).toBeNull();
   });
 
-  it('persists an enabled toggle to localStorage', async () => {
-    const plugin = await bootWith({});
-    const { setPluginEnabled } = await import('../../api/PluginManager');
+  it('cannot be turned off', async () => {
+    const plugin = await bootWith({ Themes: { theme: 'caelus' } });
+    const { isPluginEnabled, setPluginEnabled } = await import('../../api/PluginManager');
 
-    setPluginEnabled(plugin.name, true);
+    setPluginEnabled(plugin.name, false);
 
-    // The write is debounced, so it has to be flushed before it can be observed.
-    await new Promise((r) => { setTimeout(r, 250); });
-
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    expect(saved.plugins?.Themes?.enabled).toBe(true);
+    expect(isPluginEnabled('Themes')).toBe(true);
+    expect(document.getElementById('draht-theme')).not.toBeNull();
   });
 });

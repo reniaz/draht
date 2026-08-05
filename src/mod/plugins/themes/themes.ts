@@ -246,10 +246,125 @@ export const TELEGRAM_DARK: ThemeSeed = {
   deleted: '#e53935',
 };
 
+
+/**
+ * Well-known palettes, mapped onto the seed.
+ *
+ * Each uses its project's published values. The mapping is interpretive where a palette
+ * has no direct equivalent — none of them were designed with chat bubbles or a chat list
+ * in mind — so the rule followed is: `background` is the canonical base, `surface` steps
+ * once away from it, `raised` once further, and the muted text tone is whatever that
+ * palette uses for comments.
+ */
+const CATPPUCCIN_MOCHA: ThemeSeed = {
+  background: '#1e1e2e',
+  surface: '#181825',
+  raised: '#313244',
+  border: '#313244',
+  text: '#cdd6f4',
+  textMuted: '#a6adc8',
+  accent: '#cba6f7',
+  link: '#89b4fa',
+  error: '#f38ba8',
+  success: '#a6e3a1',
+  deleted: '#f38ba8',
+};
+
+const NORD: ThemeSeed = {
+  background: '#2e3440',
+  surface: '#3b4252',
+  raised: '#434c5e',
+  border: '#4c566a',
+  text: '#eceff4',
+  textMuted: '#81a1c1',
+  accent: '#88c0d0',
+  link: '#8fbcbb',
+  error: '#bf616a',
+  success: '#a3be8c',
+  deleted: '#bf616a',
+};
+
+const GRUVBOX_DARK: ThemeSeed = {
+  background: '#282828',
+  surface: '#32302f',
+  raised: '#3c3836',
+  border: '#504945',
+  text: '#ebdbb2',
+  textMuted: '#928374',
+  accent: '#fe8019',
+  link: '#83a598',
+  error: '#fb4934',
+  success: '#b8bb26',
+  deleted: '#fb4934',
+};
+
+const DRACULA: ThemeSeed = {
+  background: '#282a36',
+  surface: '#21222c',
+  raised: '#44475a',
+  border: '#44475a',
+  text: '#f8f8f2',
+  textMuted: '#6272a4',
+  accent: '#bd93f9',
+  link: '#8be9fd',
+  error: '#ff5555',
+  success: '#50fa7b',
+  deleted: '#ff79c6',
+};
+
+const TOKYO_NIGHT: ThemeSeed = {
+  background: '#1a1b26',
+  surface: '#16161e',
+  raised: '#292e42',
+  border: '#292e42',
+  text: '#c0caf5',
+  textMuted: '#565f89',
+  accent: '#7aa2f7',
+  link: '#7dcfff',
+  error: '#f7768e',
+  success: '#9ece6a',
+  deleted: '#f7768e',
+};
+
+const ROSE_PINE: ThemeSeed = {
+  background: '#191724',
+  surface: '#1f1d2e',
+  raised: '#26233a',
+  border: '#26233a',
+  text: '#e0def4',
+  textMuted: '#908caa',
+  accent: '#c4a7e7',
+  link: '#9ccfd8',
+  error: '#eb6f92',
+  success: '#31748f',
+  deleted: '#eb6f92',
+};
+
+const EVERFOREST_DARK: ThemeSeed = {
+  background: '#2d353b',
+  surface: '#343f44',
+  raised: '#3d484d',
+  border: '#4f585e',
+  text: '#d3c6aa',
+  textMuted: '#859289',
+  accent: '#a7c080',
+  link: '#7fbbb3',
+  error: '#e67e80',
+  success: '#a7c080',
+  deleted: '#e67e80',
+};
+
 export const DEFAULT_SEED = CAELUS;
 
 export const THEMES: ModTheme[] = [
   { id: 'caelus', label: 'caelus', seed: CAELUS },
+  { id: 'catppuccin-mocha', label: 'Catppuccin Mocha', seed: CATPPUCCIN_MOCHA },
+  { id: 'nord', label: 'Nord', seed: NORD },
+  { id: 'gruvbox-dark', label: 'Gruvbox Dark', seed: GRUVBOX_DARK },
+  { id: 'dracula', label: 'Dracula', seed: DRACULA },
+  { id: 'tokyo-night', label: 'Tokyo Night', seed: TOKYO_NIGHT },
+  { id: 'rose-pine', label: 'Rosé Pine', seed: ROSE_PINE },
+  { id: 'everforest-dark', label: 'Everforest Dark', seed: EVERFOREST_DARK },
 ];
 
 export function getTheme(id: string) {

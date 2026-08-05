@@ -1,0 +1,8 @@
+// Only the size is ours. Spacing comes from upstream's `.ListItem-main-icon`, which is
+// also on this element, so the row lines up with its icon-font neighbours by construction
+// rather than by a margin that has to be re-tuned whenever upstream retouches the menu.
+.draht-menu-logo {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+}

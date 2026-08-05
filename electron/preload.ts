@@ -36,6 +36,11 @@ contextBridge.exposeInMainWorld('draht', {
     ipcRenderer.send('draht:install-update');
   },
 
+  /** The running app's version, as installed — not the build-time constant. */
+  appVersion(): Promise<string | undefined> {
+    return ipcRenderer.invoke('draht:app-version');
+  },
+
   /** Restores and raises the window. `window.focus()` alone cannot do this in Electron. */
   focusWindow() {
     ipcRenderer.send('draht:focus-window');

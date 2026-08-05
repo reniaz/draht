@@ -285,6 +285,8 @@ export enum SettingsScreens {
   Passkeys,
   // #region mod
   ModPlugins,
+  ModTheme,
+  ModPluginList,
   // #endregion mod
 }
 

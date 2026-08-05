@@ -100,7 +100,12 @@ const ThemeEditor: FC = () => {
           tabIndex={0}
           onClick={() => select('off')}
         >
-          <span className="draht-theme-name">Off — use Telegram&apos;s own colours</span>
+          <span className="draht-theme-swatches">
+            {(['background', 'surface', 'accent', 'text'] as const).map((key) => (
+              <i key={key} style={`background:${TELEGRAM_DARK[key]}`} />
+            ))}
+          </span>
+          <span className="draht-theme-name">Default</span>
           {selected === 'off' && <span className="draht-theme-tick">✓</span>}
         </div>
 

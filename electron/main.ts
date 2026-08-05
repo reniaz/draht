@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 
 import { startWebServer, type WebServer } from './server';
 import { initThemes } from './themes';
+import { runStartupUpdate } from './startupUpdate';
 import { initUpdater } from './updater';
 import { initWindowControls } from './windowControls';
 
@@ -143,6 +144,11 @@ if (!app.requestSingleInstanceLock()) {
       startUrl = `${webServer.baseUrl}index.html`;
       appOrigin = webServer.origin;
     }
+
+    // Updates are installed here, behind a splash, so the version installed is always the
+    // newest at this moment rather than whatever was staged earlier. Returns true when an
+    // install is starting, in which case the app is about to quit and relaunch.
+    if (await runStartupUpdate(ICON)) return;
 
     const mainWindow = createWindow(startUrl, appOrigin);
 

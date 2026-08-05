@@ -13,59 +13,48 @@ import './UpdateModal.scss';
  * jarring against a themed client. Built from upstream's own Modal and Button, so it
  * inherits whatever colourscheme is active.
  *
+ * No version number is shown. Nothing is downloaded at this point: the app restarts and
+ * the splash checks again, so the version installed is whatever is newest then — naming
+ * one here would risk promising a version that is already superseded by the time you
+ * click.
+ *
  * Renders nothing outside the desktop shell, where `window.draht` is undefined.
  */
 const UpdateModal: FC = () => {
-  const [version, setVersion] = useState<string | undefined>();
-  const [percent, setPercent] = useState<number | undefined>();
-  const [isInstalling, setIsInstalling] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(false);
+  const [isRestarting, setIsRestarting] = useState(false);
 
   useEffect(() => {
     const native = window.draht;
     if (!native) return undefined;
 
-    const offProgress = native.onUpdateProgress(({ percent: value }) => setPercent(value));
-    const offReady = native.onUpdateReady(({ version: value }) => {
-      setPercent(undefined);
-      setVersion(value);
-    });
-
-    return () => {
-      offProgress();
-      offReady();
-    };
+    return native.onUpdateReady(() => setIsAvailable(true));
   }, []);
 
   function install() {
-    // The window is about to be replaced, so show a terminal state rather than letting
-    // the button look unresponsive while NSIS starts.
-    setIsInstalling(true);
+    setIsRestarting(true);
     window.draht?.installUpdate();
   }
 
   return (
     <Modal
-      isOpen={Boolean(version)}
+      isOpen={isAvailable}
       title="Update available"
-      hasCloseButton={!isInstalling}
-      onClose={() => !isInstalling && setVersion(undefined)}
+      hasCloseButton={!isRestarting}
+      onClose={() => !isRestarting && setIsAvailable(false)}
       className="draht-update-modal"
     >
-      {isInstalling ? (
-        <p className="draht-update-text">
-          Updating Draht… the app will restart on its own.
-        </p>
+      {isRestarting ? (
+        <p className="draht-update-text">Restarting to update…</p>
       ) : (
         <>
-          <p className="draht-update-text">
-            {`Draht ${version} has been downloaded.`}
-          </p>
+          <p className="draht-update-text">An update is available.</p>
           <p className="draht-update-hint">
-            Restart now, or it installs by itself the next time you close Draht.
-            Your login and message log are kept either way.
+            Draht restarts and installs it — this takes a few seconds. Your login,
+            settings and message log are kept.
           </p>
           <div className="draht-update-actions">
-            <Button size="smaller" isText onClick={() => setVersion(undefined)}>
+            <Button size="smaller" isText onClick={() => setIsAvailable(false)}>
               Later
             </Button>
             <Button size="smaller" onClick={install}>
@@ -73,10 +62,6 @@ const UpdateModal: FC = () => {
             </Button>
           </div>
         </>
-      )}
-
-      {percent !== undefined && !version && (
-        <p className="draht-update-hint">{`Downloading… ${percent}%`}</p>
       )}
     </Modal>
   );

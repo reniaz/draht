@@ -105,6 +105,10 @@ const SettingsHeader: FC<OwnProps> = ({
         return <h3>{oldLang('lng_settings_experimental')}</h3>;
       // #region mod
       case SettingsScreens.ModPlugins:
+        return <h3>Draht</h3>;
+      case SettingsScreens.ModTheme:
+        return <h3>Theme</h3>;
+      case SettingsScreens.ModPluginList:
         return <h3>Plugins</h3>;
       // #endregion mod
 

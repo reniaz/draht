@@ -17,6 +17,8 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
+import { cleanRelease } from './clean-release.mjs';
+
 function run(cmd, args, opts = {}) {
   return execFileSync(cmd, args, { encoding: 'utf8', stdio: 'pipe', ...opts }).trim();
 }
@@ -208,6 +210,15 @@ runLive('npx', ['electron-builder', '--win', 'nsis', '--publish', 'always']);
 
 /* 8. Fail loudly if the assets did not all land on one release. */
 await verifyRelease();
+
+/*
+ * 9. The artefacts are on GitHub now; the local copies are just disk.
+ *
+ * Packaging leaves ~450 MB of unpacked app behind every time, which is invisible until it
+ * is several gigabytes.
+ */
+console.log('');
+cleanRelease(version);
 
 console.log(`\n  Released ${tag}.`);
 console.log('  Installed copies will pick it up on their next launch.\n');

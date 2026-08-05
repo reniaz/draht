@@ -140,7 +140,10 @@ export default definePlugin({
     'Custom colourschemes. Ships with caelus, accepts theme files from your themes '
     + 'folder, or pick your own colours. Works best with Telegram\'s Dark theme.',
   authors: ['Draht'],
-  enabledByDefault: false,
+  // Always on. "Default" in the theme list is what turns custom colouring off, so a
+  // separate switch would be a second way to express the same thing — and an easy way to
+  // end up with a chosen theme that silently does nothing.
+  required: true,
 
   settings,
 

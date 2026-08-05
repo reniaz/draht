@@ -26,6 +26,9 @@ import ProfileInfo from '../../common/profile/ProfileInfo';
 import Island from '../../gili/layout/Island';
 import ConfirmDialog from '../../ui/ConfirmDialog';
 import ListItem from '../../ui/ListItem';
+// #region mod
+import DrahtSettingsItem from '../../../mod/components/settings/DrahtSettingsItem';
+// #endregion mod
 
 import styles from './SettingsMain.module.scss';
 
@@ -104,13 +107,7 @@ const SettingsMain: FC<OwnProps & StateProps> = ({
       <div className={styles.menuSection}>
         <Island>
           {/* #region mod */}
-          <ListItem
-            icon="bots"
-            narrow
-            onClick={() => openSettingsScreen({ screen: SettingsScreens.ModPlugins })}
-          >
-            Plugins
-          </ListItem>
+          <DrahtSettingsItem />
           {/* #endregion mod */}
           <ListItem
             icon="settings"

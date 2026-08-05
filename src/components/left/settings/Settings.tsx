@@ -26,6 +26,7 @@ import SettingsEditProfile from './SettingsEditProfile';
 import SettingsExperimental from './SettingsExperimental';
 // #region mod
 import ModSettings from '../../../mod/components/settings/ModSettings';
+import DrahtVersion from '../../../mod/components/settings/DrahtVersion';
 // #endregion mod
 import SettingsGeneral from './SettingsGeneral';
 import SettingsGeneralBackground from './SettingsGeneralBackground';
@@ -316,9 +317,9 @@ const Settings: FC<OwnProps> = ({
         );
       // #region mod
       case SettingsScreens.ModPlugins:
-        return (
-          <ModSettings isActive={isScreenActive} onReset={handleReset} />
-        );
+      case SettingsScreens.ModTheme:
+      case SettingsScreens.ModPluginList:
+        return <ModSettings screen={currentScreen} isActive={isScreenActive} onReset={handleReset} />;
       // #endregion mod
       case SettingsScreens.GeneralChatBackground:
         return (
@@ -528,6 +529,9 @@ const Settings: FC<OwnProps> = ({
           hasProfileBackground={hasProfileBackground}
         />
         {renderCurrentSectionContent(isScreenActive, activeKey)}
+        {/* #region mod */}
+        <DrahtVersion />
+        {/* #endregion mod */}
       </>
     );
   }

@@ -35,10 +35,11 @@ const ALLOWLIST = {
 
   // Settings UI wiring. All four delegate to src/mod/components/settings/ModSettings.tsx,
   // so additional mod screens nest inside that one and cost nothing here.
-  'src/types/index.ts': 4,
-  'src/components/left/settings/Settings.tsx': 10,
-  'src/components/left/settings/SettingsHeader.tsx': 6,
+  'src/types/index.ts': 6,
+  'src/components/left/settings/Settings.tsx': 14,
+  'src/components/left/settings/SettingsHeader.tsx': 10,
   'src/components/left/settings/SettingsMain.tsx': 10,
+  'src/components/left/LeftColumn.tsx': 12,
   // Config files, not seam call sites — the tight budget is about keeping *code* edits
   // surgical, and does not buy anything here.
   'package.json': 40,
