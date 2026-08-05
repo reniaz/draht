@@ -1,15 +1,31 @@
-// Sits in the top slice of the header area. `--middle-header-height` is enlarged by the
-// bar's height (see index.ts), and every consumer of that variable — the message list's
-// top offset, the pinned-message panes, the composer — shifts down with it, so the bar
-// costs no per-component adjustments.
-.draht-tabbar {
-  position: absolute;
-  z-index: calc(var(--z-middle-header) + 1);
-  top: 0;
-  right: 0;
-  left: 0;
+// The bar is a sibling of `.messages-layout`, not a child of it, and takes its space in
+// flow rather than by overriding upstream's header metrics.
+//
+// The first attempt enlarged `--middle-header-height` and padded `.MiddleHeader`. That
+// reserved the space, but the header is a floating rounded island in this build, so
+// making it taller inflated the pill and pushed its contents out of place. Nothing about
+// the header needs to change: give the column a row above it and the header keeps the
+// geometry it was designed with.
+body.draht-has-tabs {
+  #MiddleColumn {
+    display: flex;
+    flex-direction: column;
+  }
 
-  height: var(--draht-tabs-height);
+  #MiddleColumn > .messages-layout,
+  #MiddleColumn > .Transition {
+    // `height: 100%` would be 100% of the column including the bar, and overflow by
+    // exactly the bar's height.
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+  }
+}
+
+.draht-tabbar {
+  flex-shrink: 0;
+
+  height: 2.25rem;
 
   background-color: var(--color-background);
   border-bottom: 1px solid var(--color-borders);
@@ -76,24 +92,8 @@
   }
 }
 
-// Only when the plugin is running. The variable is redefined on `html, body` as well as
-// `:root`: upstream declares its layout variables on `html, body`, and a declaration on
-// the element beats an inherited one from `:root` however important the ancestor's is.
-html body.draht-has-tabs,
-body.draht-has-tabs {
-  --draht-tabs-height: 2.25rem;
-}
-
-body.draht-has-tabs {
-  --middle-header-height: calc(3rem + var(--draht-tabs-height)) !important;
-
-  .MiddleHeader {
-    padding-top: var(--draht-tabs-height);
-  }
-}
-
-// Without the class the bar takes no space and is not shown, so the stock layout is
-// exactly what it was.
+// With the plugin off the bar is not rendered at all, but the class going away must also
+// return the column to its stock layout.
 body:not(.draht-has-tabs) .draht-tabbar {
   display: none;
 }

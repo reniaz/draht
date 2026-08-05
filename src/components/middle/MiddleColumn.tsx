@@ -564,12 +564,12 @@ function MiddleColumn({
         />
       )}
       <div id="middle-column-portals" />
+      {/* #region mod */}
+      <ChatTabBar />
+      {/* #endregion mod */}
       {Boolean(renderingChatId && renderingThreadId) && (
         <>
           <div className="messages-layout" onDragEnter={renderingCanPost ? handleDragEnter : undefined}>
-            {/* #region mod */}
-            <ChatTabBar />
-            {/* #endregion mod */}
             <MiddleHeaderPanes
               key={`${renderingChatId}-${renderingThreadId}-${renderingMessageListType}`}
               chatId={renderingChatId!}

@@ -1,12 +1,14 @@
 /**
- * One-off diagnostic: does the chat-tab bar's layout override actually take effect?
+ * One-off diagnostic: are the chat-tab styles loaded and in effect on a cold start?
  *
  *   npm run mod:diagnose:tabs
  *
- * The bar reserves its space by enlarging `--middle-header-height`, which upstream
- * declares on `html, body`. Overriding a variable at the wrong selector is how the font
- * plugin silently did nothing for weeks, so this asserts the computed value rather than
- * assuming the rule wins.
+ * The bar itself lives in MiddleColumn, which is inside the lazily-loaded Main chunk, so
+ * it does not exist at the login screen where this can reach. What can be checked, and
+ * what actually broke, is whether the plugin's stylesheet is present at startup at all:
+ * the rules first shipped only alongside MiddleColumn, so the column had no layout for
+ * the bar until the first chat was opened. A probe element answers that without needing a
+ * logged-in session.
  */
 import { app, BrowserWindow } from 'electron';
 import { existsSync } from 'node:fs';
@@ -47,29 +49,41 @@ void app.whenReady().then(async () => {
   await new Promise((r) => { setTimeout(r, 8000); });
 
   const report = await win.webContents.executeJavaScript(`(() => {
-    const body = getComputedStyle(document.body);
-    const toPx = (value) => value.trim();
+    // A stand-in for the real column, so the rules can be measured where they apply.
+    const column = document.createElement('div');
+    column.id = 'MiddleColumn';
+    const bar = document.createElement('div');
+    bar.className = 'draht-tabbar';
+    column.appendChild(bar);
+    document.body.appendChild(column);
 
-    return {
+    const barStyle = getComputedStyle(bar);
+    const columnStyle = getComputedStyle(column);
+    const result = {
       bodyClass: document.body.classList.contains('draht-has-tabs'),
-      tabsHeight: toPx(body.getPropertyValue('--draht-tabs-height')),
-      headerHeight: toPx(body.getPropertyValue('--middle-header-height')),
-      // What the stock value is, for comparison.
-      rootHeaderHeight: toPx(
-        getComputedStyle(document.documentElement).getPropertyValue('--middle-header-height'),
-      ),
+      barHeight: barStyle.height,
+      barVisible: barStyle.display !== 'none',
+      columnIsFlexColumn: columnStyle.display === 'flex' && columnStyle.flexDirection === 'column',
+      // Upstream's header metrics must be untouched: enlarging them inflated the header
+      // island the first time round.
+      headerHeight: getComputedStyle(document.body)
+        .getPropertyValue('--middle-header-height').trim(),
     };
+
+    column.remove();
+    return result;
   })()`);
 
   console.log('\n--- chat tabs ---');
   console.log(JSON.stringify(report, undefined, 2));
 
-  // 3rem header + 2.25rem bar = 5.25rem, at 16px = 84px.
-  const ok = report.bodyClass && report.headerHeight.startsWith('calc')
-    ? true
-    : report.bodyClass && report.headerHeight !== report.rootHeaderHeight;
+  const ok = report.bodyClass
+    && report.barVisible
+    && report.barHeight !== '0px'
+    && report.columnIsFlexColumn
+    && report.headerHeight === '3rem';
 
-  console.log(`\n  ${ok ? 'OK' : 'FAIL'}: the bar ${ok ? 'reserves' : 'does not reserve'} its space.\n`);
+  console.log(`\n  ${ok ? 'OK' : 'FAIL'}: styles ${ok ? 'load at startup and leave the header alone' : 'are wrong'}.\n`);
 
   app.exit(ok ? 0 : 1);
 });

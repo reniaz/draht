@@ -8,7 +8,12 @@ export type ChatTab = {
 const STORAGE_KEY = 'draht-chat-tabs';
 
 let tabs: ChatTab[] = [];
+let activeKey: string | undefined;
 const listeners = new Set<NoneToVoidFunction>();
+
+export function keyOf(tab: ChatTab) {
+  return `${tab.chatId}-${tab.threadId}`;
+}
 
 export function getTabs(): ChatTab[] {
   return tabs;
@@ -21,7 +26,7 @@ export function subscribe(listener: NoneToVoidFunction) {
 
 function notify() {
   // A tab bar that only redraws when the global state happens to change would sit stale
-  // after an open or close, so the store drives its own updates.
+  // after an open or a close, so the store drives its own updates.
   for (const listener of listeners) {
     try {
       listener();
@@ -37,25 +42,64 @@ export function isSameTab(a: ChatTab, b: ChatTab) {
   return a.chatId === b.chatId && String(a.threadId) === String(b.threadId);
 }
 
+function indexOf(tab: ChatTab) {
+  return tabs.findIndex((open) => isSameTab(open, tab));
+}
+
 /**
- * @returns true when the tab is new, false when it was already open.
+ * Opening a chat the ordinary way — from the chat list, a search result, a link.
+ *
+ * Replaces the tab you were on rather than adding one, which is what a browser does when
+ * you follow a link: clicking through a dozen chats should not leave a dozen tabs behind.
+ * "Open in new tab" is the gesture that adds.
+ *
+ * With no tabs yet, the chat you are looking at becomes the first one — the bar always
+ * shows where you are, instead of appearing only once you have used a context menu.
+ */
+export function visitTab(tab: ChatTab) {
+  const existing = indexOf(tab);
+
+  if (existing !== -1) {
+    activeKey = keyOf(tabs[existing]);
+    notify();
+    return;
+  }
+
+  const replacing = tabs.findIndex((open) => keyOf(open) === activeKey);
+
+  tabs = replacing === -1
+    ? [...tabs, tab]
+    : tabs.map((open, index) => (index === replacing ? tab : open));
+
+  activeKey = keyOf(tab);
+  notify();
+}
+
+/**
+ * "Open in new tab": always adds, and makes the new tab the one being replaced next.
+ *
+ * @returns true when the tab is new, false when that chat was already open.
  */
 export function addTab(tab: ChatTab): boolean {
-  const exists = tabs.some((open) => isSameTab(open, tab));
-  if (exists) return false;
+  const exists = indexOf(tab) !== -1;
 
-  tabs = [...tabs, tab];
+  if (!exists) tabs = [...tabs, tab];
+  activeKey = keyOf(tab);
   notify();
-  return true;
+
+  return !exists;
 }
 
 export function removeTab(tab: ChatTab) {
+  if (activeKey === keyOf(tab)) activeKey = undefined;
+
   tabs = tabs.filter((open) => !isSameTab(open, tab));
   notify();
 }
 
 export function clearTabs() {
   tabs = [];
+  activeKey = undefined;
   notify();
 }
 
@@ -66,7 +110,7 @@ export function clearTabs() {
  * do, and the thing that does not leave you staring at an empty middle column.
  */
 export function neighbourOf(tab: ChatTab): ChatTab | undefined {
-  const index = tabs.findIndex((open) => isSameTab(open, tab));
+  const index = indexOf(tab);
   if (index === -1) return undefined;
 
   return tabs[index - 1] ?? tabs[index + 1];

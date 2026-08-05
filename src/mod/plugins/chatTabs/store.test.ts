@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  addTab, clearTabs, getTabs, isSameTab, neighbourOf, removeTab,
+  addTab, clearTabs, getTabs, isSameTab, neighbourOf, removeTab, visitTab,
 } from './store';
 
 const A = { chatId: '1', threadId: -1 };
@@ -55,5 +55,59 @@ describe('chat tab store', () => {
     removeTab(B);
 
     expect(getTabs()).toEqual([A, C]);
+  });
+
+  describe('visiting a chat the ordinary way', () => {
+    it('opens the first tab when there are none', () => {
+      // The bar has to show where you are, not appear only once a context menu is used.
+      visitTab(A);
+
+      expect(getTabs()).toEqual([A]);
+    });
+
+    it('replaces the tab you were on rather than adding one', () => {
+      // Clicking through a dozen chats must not leave a dozen tabs behind.
+      visitTab(A);
+      visitTab(B);
+      visitTab(C);
+
+      expect(getTabs()).toEqual([C]);
+    });
+
+    it('leaves other tabs alone while replacing the active one', () => {
+      addTab(A);
+      addTab(B);
+      visitTab(C);
+
+      expect(getTabs()).toEqual([A, C]);
+    });
+
+    it('switches to an existing tab instead of duplicating it', () => {
+      addTab(A);
+      addTab(B);
+      visitTab(A);
+
+      expect(getTabs()).toEqual([A, B]);
+    });
+
+    it('appends after the active tab was closed', () => {
+      // Nothing is active, so there is nothing to replace, and replacing an arbitrary
+      // tab would silently drop one the user had opened.
+      addTab(A);
+      addTab(B);
+      removeTab(B);
+      visitTab(C);
+
+      expect(getTabs()).toEqual([A, C]);
+    });
+
+    it('replaces a freshly opened tab when you navigate away from it', () => {
+      // "Open in new tab" makes that tab the active one, so the next ordinary open
+      // replaces it like any other. Otherwise every new tab would be permanent.
+      addTab(A);
+      visitTab(B);
+
+      expect(getTabs()).toEqual([B]);
+    });
   });
 });

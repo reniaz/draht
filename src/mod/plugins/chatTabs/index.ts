@@ -2,9 +2,12 @@ import type { ThreadId } from '../../../types';
 
 import { getActions } from '../../../global';
 
+import { attachAction, detachAction } from '../../api/ActionBus';
 import { addSeam, removeSeam } from '../../api/Seams';
 import { definePlugin } from '../../api/types';
-import { addTab, clearTabs, getTabs, restore } from './store';
+import {
+  addTab, clearTabs, getTabs, restore, visitTab,
+} from './store';
 
 // Imported here as well as from the component. The component lives inside MiddleColumn,
 // which is only loaded once you are past the login screen — so on a cold start the rules
@@ -13,6 +16,19 @@ import { addTab, clearTabs, getTabs, restore } from './store';
 import './TabBar.scss';
 
 const BODY_CLASS = 'draht-has-tabs';
+
+/**
+ * Every way of reaching a chat — the chat list, a search result, a link, a forum topic —
+ * ends up in `processOpenChatOrThread`, so one handler covers all of them. Attaching to
+ * `openChat` and `openThread` separately would miss whatever calls the shared one
+ * directly, and would fire twice for the paths that go through both.
+ */
+const handleOpenChat = ((global: unknown, actions: unknown, payload: any) => {
+  const { chatId, threadId } = payload || {};
+  if (chatId) visitTab({ chatId, threadId: threadId ?? -1 });
+
+  return undefined;
+}) as never;
 
 /**
  * Handles upstream's "open in new tab".
@@ -41,6 +57,7 @@ export default definePlugin({
 
   start() {
     addSeam('openChatInNewTab', handleOpenInNewTab);
+    attachAction('processOpenChatOrThread', handleOpenChat);
     restore();
 
     // The bar is rendered unconditionally by MiddleColumn; the class is what gives it its
@@ -51,6 +68,7 @@ export default definePlugin({
 
   stop() {
     removeSeam('openChatInNewTab', handleOpenInNewTab);
+    detachAction('processOpenChatOrThread', handleOpenChat);
     document.body.classList.remove(BODY_CLASS);
     clearTabs();
   },
