@@ -160,8 +160,19 @@ setx DRAHT_TELEGRAM_TOKEN "123456:ABC..."
 setx DRAHT_TELEGRAM_CHAT "@yourchannel"
 ```
 
-`DRAHT_TELEGRAM_CHAT` is the channel's public @name, or its numeric id for a private one
-(add [@userinfobot](https://t.me/userinfobot) to the channel to read the id).
+`DRAHT_TELEGRAM_CHAT` is the channel's public @name — the same word as its link, so
+`t.me/drahtupdates` is `@drahtupdates`. A channel only has one if it is public: *Edit →
+Channel Type → Public Channel*. A private channel has an invite link (`t.me/+AbCd…`) and
+no username, so it is addressed by its numeric id instead, which the apps never show. Your
+own bot can report it:
+
+```bash
+npm run mod:telegram:chats
+```
+
+Add the bot to the channel and post a message there first — Telegram only reports recent
+activity. This asks your bot directly rather than forwarding a message to a third-party
+id-lookup bot.
 
 Both values are secrets — anyone holding them can post as you. Keep them in your
 environment, never in the repo. To re-post an announcement for a release that already
