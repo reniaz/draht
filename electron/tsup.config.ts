@@ -14,7 +14,12 @@ import { defineConfig } from 'tsup';
  */
 export default defineConfig([
   {
-    entry: { main: 'electron/main.ts', smoke: 'electron/smoke.ts', diagnose: 'electron/diagnose.ts' },
+    entry: {
+      main: 'electron/main.ts',
+      smoke: 'electron/smoke.ts',
+      diagnose: 'electron/diagnose.ts',
+      diagnoseFonts: 'electron/diagnoseFonts.ts',
+    },
     outDir: 'electron/dist',
     format: ['cjs'],
     outExtension: () => ({ js: '.cjs' }),

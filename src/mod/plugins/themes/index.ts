@@ -59,6 +59,12 @@ const settings = definePluginSettings({
     description: 'Selected theme',
     default: 'off',
   },
+  picker: {
+    type: OptionType.COMPONENT,
+    description: 'Theme',
+    displayName: 'Theme',
+    component: ThemeEditor,
+  },
   brightness: {
     type: OptionType.SLIDER,
     description: 'Lifts every colour toward white. 0 uses the theme as designed.',
@@ -69,12 +75,6 @@ const settings = definePluginSettings({
     step: 5,
     unit: '%',
     onChange: () => apply(),
-  },
-  picker: {
-    type: OptionType.COMPONENT,
-    description: 'Theme',
-    displayName: 'Theme',
-    component: ThemeEditor,
   },
   customSeed: {
     type: OptionType.CUSTOM,

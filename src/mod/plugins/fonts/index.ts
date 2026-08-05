@@ -89,6 +89,12 @@ function clear() {
  * telegram-tt writes its own values after the mod initialises, and a normal declaration
  * would simply be overwritten. This also means startup needs nothing but the saved name —
  * the font list API is only used by the picker.
+ *
+ * The variable is redefined on `html, body`, not just `:root`, and the `font-family`
+ * property is set outright as well. Upstream declares `--font-family` on `html, body`
+ * itself, and a declaration on the element beats an inherited one from `:root` no matter
+ * how important the ancestor's is — inheritance is not a cascade contest. Overriding only
+ * `:root` left the variable correct on `<html>` and the whole interface still on Roboto.
  */
 function apply() {
   try {
@@ -101,7 +107,10 @@ function apply() {
 
     const stack = `"${family.replace(/"/g, '')}", ${FALLBACKS}`;
 
-    const rules = [`:root { --font-family: ${stack} !important; }`];
+    const rules = [
+      `:root, html, body { --font-family: ${stack} !important; }`,
+      `html, body { font-family: ${stack} !important; }`,
+    ];
 
     for (const scope of SCOPES) {
       if (settings.store[scope.key] === false) {

@@ -151,7 +151,19 @@ const PluginSettingControl: FC<OwnProps> = ({
 
     case OptionType.COMPONENT: {
       const Component = setting.component;
-      return labelled(<Component value={value} setValue={commit} />);
+
+      // A component brings its own layout, so the explanatory line goes above it rather
+      // than trailing underneath where it reads as a stray caption. A description that
+      // only repeats the label says nothing and is dropped.
+      return wrap(
+        <>
+          <div className="draht-setting-label">{label}</div>
+          {setting.description !== label && (
+            <p className="draht-setting-hint">{setting.description}</p>
+          )}
+          <Component value={value} setValue={commit} />
+        </>,
+      );
     }
 
     // CUSTOM is persisted plugin state with no UI by design.

@@ -45,9 +45,15 @@ const FontPicker: FC<OwnProps> = ({ value, setValue }) => {
   }, []);
 
   const needle = query.trim().toLowerCase();
-  const filtered = needle
+  const matching = needle
     ? families.filter((family) => family.toLowerCase().includes(needle))
     : families;
+
+  // The chosen font goes first, right under the default row, so what is in use is visible
+  // without scrolling a couple of hundred names to wherever it happens to sort.
+  const filtered = value && matching.includes(value)
+    ? [value, ...matching.filter((family) => family !== value)]
+    : matching;
 
   return (
     <div className="draht-font-picker">

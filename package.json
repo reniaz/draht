@@ -54,7 +54,8 @@
     "mod:publish": "electron-builder --win nsis --publish always",
     "mod:check:app": "node tools/check-app.mjs",
     "mod:diagnose": "npm run mod:shell && cross-env DRAHT_PORT=49999 electron electron/dist/diagnose.cjs",
-    "mod:clean": "node tools/clean-release.mjs"
+    "mod:clean": "node tools/clean-release.mjs",
+    "mod:diagnose:fonts": "npm run mod:shell && cross-env DRAHT_PORT=49998 electron electron/dist/diagnoseFonts.cjs"
   },
   "engines": {
     "node": "^24.11 || ^26",
