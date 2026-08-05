@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildThemeVars, DEFAULT_SEED } from './themes';
+import { buildThemeVars, DEFAULT_SEED, TELEGRAM_DARK } from './themes';
 import { parseThemeFile, stringifyTheme } from './themeFile';
 
 const full = JSON.stringify({
@@ -106,6 +106,16 @@ describe('parseThemeFile', () => {
 
     // Older theme files must keep working.
     expect(seed.deleted).toBeDefined();
+  });
+
+  it('has a complete Telegram-dark palette to reset to', () => {
+    // The reset target must cover every key, or resetting would leave gaps.
+    for (const key of Object.keys(DEFAULT_SEED) as (keyof typeof DEFAULT_SEED)[]) {
+      expect(TELEGRAM_DARK[key], key).toMatch(/^#[0-9a-f]{6}$/i);
+    }
+
+    const vars = buildThemeVars(TELEGRAM_DARK);
+    expect(vars['--color-background']).toBe('#212121');
   });
 
   it('produces a usable palette', () => {

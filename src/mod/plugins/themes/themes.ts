@@ -225,6 +225,27 @@ const CAELUS: ThemeSeed = {
   deleted: '#c05f5a',
 };
 
+/**
+ * Telegram's own dark palette, as the reset target.
+ *
+ * Values read from `src/styles/index.scss` (the `.component-theme-dark` block) and
+ * `_variables.scss`, so resetting lands on what Telegram actually looks like rather than
+ * on a neutral guess.
+ */
+export const TELEGRAM_DARK: ThemeSeed = {
+  background: '#212121',
+  surface: '#0f0f0f',
+  raised: '#2c2c2c',
+  border: '#303030',
+  text: '#ffffff',
+  textMuted: '#aaaaaa',
+  accent: '#8774e1',
+  link: '#8774e1',
+  error: '#e53935',
+  success: '#00c73e',
+  deleted: '#e53935',
+};
+
 export const DEFAULT_SEED = CAELUS;
 
 export const THEMES: ModTheme[] = [

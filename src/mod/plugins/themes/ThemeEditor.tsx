@@ -4,20 +4,21 @@ import { useEffect, useState } from '../../../lib/teact/teact';
 import type { ThemeSeed } from './themes';
 
 import { getSettingValue, setSettingValue } from '../../api/Settings';
-import { DEFAULT_SEED, SEED_LABELS } from './themes';
-import { apply, getAvailableThemes, loadFileThemes } from './index';
+import { SEED_LABELS, TELEGRAM_DARK } from './themes';
+import { apply, findTheme, getAvailableThemes, loadFileThemes } from './index';
 import { stringifyTheme } from './themeFile';
 
 import Button from '../../../components/ui/Button';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 
 import './ThemeEditor.scss';
 
-function parseSeed(raw: string): ThemeSeed {
+function readSeed(raw: unknown): ThemeSeed | undefined {
+  if (typeof raw !== 'string' || !raw.trim()) return undefined;
   try {
-    // Merge over the default so a partial or older saved seed still yields every key.
-    return { ...DEFAULT_SEED, ...JSON.parse(raw) };
+    return { ...TELEGRAM_DARK, ...JSON.parse(raw) };
   } catch {
-    return DEFAULT_SEED;
+    return undefined;
   }
 }
 
@@ -30,9 +31,10 @@ function parseSeed(raw: string): ThemeSeed {
 const ThemeEditor: FC = () => {
   const [, forceUpdate] = useState(0);
   const [themesPath, setThemesPath] = useState<string | undefined>();
+  const [isResetOpen, setIsResetOpen] = useState(false);
 
   const selected = String(getSettingValue('Themes', 'theme') ?? 'off');
-  const seed = parseSeed(String(getSettingValue('Themes', 'customSeed') ?? ''));
+  const seed = readSeed(getSettingValue('Themes', 'customSeed')) ?? TELEGRAM_DARK;
 
   useEffect(() => {
     void window.draht?.themesDir?.().then(setThemesPath);
@@ -43,6 +45,15 @@ const ThemeEditor: FC = () => {
   }
 
   function select(id: string) {
+    // Switching to Custom carries over whatever is on screen, so the pickers open on the
+    // colours you were just looking at rather than on an unrelated palette. Existing
+    // custom colours are kept — losing hand-picked work to a stray click would be worse
+    // than starting from the default, and Reset covers starting over deliberately.
+    if (id === 'custom' && !readSeed(getSettingValue('Themes', 'customSeed'))) {
+      const from = selected === 'off' ? TELEGRAM_DARK : (findTheme(selected)?.seed ?? TELEGRAM_DARK);
+      setSettingValue('Themes', 'customSeed', JSON.stringify(from));
+    }
+
     setSettingValue('Themes', 'theme', id);
     apply();
     rerender();
@@ -50,16 +61,14 @@ const ThemeEditor: FC = () => {
 
   function updateColour(key: keyof ThemeSeed, colour: string) {
     setSettingValue('Themes', 'customSeed', JSON.stringify({ ...seed, [key]: colour }));
-    // Editing a colour implies you want to see it.
-    if (selected !== 'custom') setSettingValue('Themes', 'theme', 'custom');
     apply();
     rerender();
   }
 
-  function startFrom(from: ThemeSeed) {
-    setSettingValue('Themes', 'customSeed', JSON.stringify(from));
-    setSettingValue('Themes', 'theme', 'custom');
+  function resetColours() {
+    setSettingValue('Themes', 'customSeed', JSON.stringify(TELEGRAM_DARK));
     apply();
+    setIsResetOpen(false);
     rerender();
   }
 
@@ -80,6 +89,7 @@ const ThemeEditor: FC = () => {
   }
 
   const available = getAvailableThemes();
+  const isCustom = selected === 'custom';
 
   return (
     <div className="draht-theme-editor">
@@ -90,7 +100,7 @@ const ThemeEditor: FC = () => {
           tabIndex={0}
           onClick={() => select('off')}
         >
-          <span>Off — use Telegram&apos;s own colours</span>
+          <span className="draht-theme-name">Off — use Telegram&apos;s own colours</span>
           {selected === 'off' && <span className="draht-theme-tick">✓</span>}
         </div>
 
@@ -114,13 +124,18 @@ const ThemeEditor: FC = () => {
         ))}
 
         <div
-          className={`draht-theme-row${selected === 'custom' ? ' draht-theme-row-active' : ''}`}
+          className={`draht-theme-row${isCustom ? ' draht-theme-row-active' : ''}`}
           role="button"
           tabIndex={0}
           onClick={() => select('custom')}
         >
-          <span>Custom — pick your own below</span>
-          {selected === 'custom' && <span className="draht-theme-tick">✓</span>}
+          <span className="draht-theme-swatches">
+            {(['background', 'surface', 'accent', 'text'] as const).map((key) => (
+              <i key={key} style={`background:${seed[key]}`} />
+            ))}
+          </span>
+          <span className="draht-theme-name">Custom</span>
+          {isCustom && <span className="draht-theme-tick">✓</span>}
         </div>
       </div>
 
@@ -131,7 +146,6 @@ const ThemeEditor: FC = () => {
           </Button>
         )}
         <Button size="tiny" isText onClick={refresh}>Reload themes</Button>
-        <Button size="tiny" isText onClick={exportTheme}>Export custom as file</Button>
       </div>
 
       {themesPath && (
@@ -140,28 +154,42 @@ const ThemeEditor: FC = () => {
         </p>
       )}
 
-      <div className="draht-theme-colours">
-        {(Object.keys(SEED_LABELS) as (keyof ThemeSeed)[]).map((key) => (
-          <label key={key} className="draht-swatch-row">
-            <input
-              type="color"
-              className="draht-swatch"
-              value={seed[key]}
-              onChange={(e) => updateColour(key, (e.currentTarget as HTMLInputElement).value)}
-            />
-            <span className="draht-swatch-label">{SEED_LABELS[key]}</span>
-            <span className="draht-swatch-hex">{seed[key]}</span>
-          </label>
-        ))}
-
-        <div className="draht-theme-actions">
-          {available.map((theme) => (
-            <Button key={theme.id} size="tiny" isText onClick={() => startFrom(theme.seed)}>
-              {`Start from ${theme.label}`}
-            </Button>
+      {/* The pickers only edit the custom theme, so showing them while a bundled or file
+          theme is selected would imply edits that go nowhere. */}
+      {isCustom && (
+        <div className="draht-theme-colours">
+          {(Object.keys(SEED_LABELS) as (keyof ThemeSeed)[]).map((key) => (
+            <label key={key} className="draht-swatch-row">
+              <input
+                type="color"
+                className="draht-swatch"
+                value={seed[key]}
+                onChange={(e) => updateColour(key, (e.currentTarget as HTMLInputElement).value)}
+              />
+              <span className="draht-swatch-label">{SEED_LABELS[key]}</span>
+              <span className="draht-swatch-hex">{seed[key]}</span>
+            </label>
           ))}
+
+          <div className="draht-theme-actions">
+            <Button size="tiny" isText onClick={exportTheme}>Save as file</Button>
+            <Button size="tiny" isText color="danger" onClick={() => setIsResetOpen(true)}>
+              Reset colours
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
+
+      <ConfirmDialog
+        isOpen={isResetOpen}
+        title="Reset colours"
+        text={'Every custom colour goes back to Telegram\'s dark theme. '
+          + 'This cannot be undone — save the current colours as a file first if you want to keep them.'}
+        confirmLabel="Reset"
+        confirmIsDestructive
+        confirmHandler={resetColours}
+        onClose={() => setIsResetOpen(false)}
+      />
     </div>
   );
 };
