@@ -37,6 +37,17 @@ const ModGeneral: FC = () => {
 
       <div className="draht-setting draht-setting-boolean">
         <Checkbox
+          label="Open chats at the newest message"
+          subLabel={'Jump straight to the bottom instead of the oldest unread message. '
+            + 'Useful with hidden read receipts, where the server keeps believing you '
+            + 'have not read anything.'}
+          checked={isPluginEnabled('OpenAtNewest')}
+          onChange={(e) => toggle('OpenAtNewest', e.currentTarget.checked)}
+        />
+      </div>
+
+      <div className="draht-setting draht-setting-boolean">
+        <Checkbox
           label="Keep My Profile out of Saved Messages"
           subLabel={'Your own chat is Saved Messages, so My Profile normally switches you '
             + 'there. This opens it in Settings and leaves your chat alone.'}
