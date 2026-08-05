@@ -12,6 +12,9 @@ import { definePlugin, OptionType } from '../../api/types';
 import {
   enqueue, installFlushHandlers, setRetentionPolicy, setStorageEnabled,
 } from '../../api/Storage';
+import {
+  keepMediaFor, restoreMedia, setMediaLimits, setMediaPersistence,
+} from './mediaStore';
 import { clearChatLog, hasChatLog, openLogViewer } from './actions';
 import { MessageLogMenuItems } from './MessageLogMenu';
 
@@ -104,6 +107,30 @@ const settings = definePluginSettings({
     default: 30,
     onChange: () => applyStoragePolicy(),
   },
+  persistMedia: {
+    type: OptionType.BOOLEAN,
+    displayName: 'Keep media of deleted messages',
+    description:
+      'Photos and other media are otherwise lost, because Telegram\'s own cache expires '
+      + 'after five days and the original is gone. Only media you had already loaded can '
+      + 'be kept.',
+    default: true,
+    onChange: () => applyStoragePolicy(),
+  },
+  maxMediaFileMb: {
+    type: OptionType.NUMBER,
+    displayName: 'Largest file to keep (MB)',
+    description: 'Bigger files are skipped. Covers photos and voice notes; most videos will not fit.',
+    default: 5,
+    onChange: () => applyStoragePolicy(),
+  },
+  maxMediaTotalMb: {
+    type: OptionType.NUMBER,
+    displayName: 'Total media to keep (MB)',
+    description: 'Oldest media is dropped first once this is reached.',
+    default: 200,
+    onChange: () => applyStoragePolicy(),
+  },
 });
 
 /**
@@ -124,6 +151,14 @@ function applyStoragePolicy() {
     maxPerChat: Math.max(1, Number(settings.store.maxPerChat) || 200),
     maxTotalMessages: Math.max(1, Number(settings.store.maxTotalMessages) || 5000),
     maxAgeDays: Math.max(1, Number(settings.store.maxAgeDays) || 30),
+  });
+
+  // Media follows the same passcode rule as the log itself: it is the same data, and
+  // storing it in the clear would undermine the passcode just as much.
+  setMediaPersistence(Boolean(settings.store.persistMedia) && !blockedByPasscode);
+  setMediaLimits({
+    maxFileBytes: Math.max(1, Number(settings.store.maxMediaFileMb) || 5) * 1024 * 1024,
+    maxTotalBytes: Math.max(1, Number(settings.store.maxMediaTotalMb) || 200) * 1024 * 1024,
   });
 }
 
@@ -237,6 +272,9 @@ function protectMessages<T extends GlobalState>(
 
     const deletedAt = Date.now();
     enqueue(resolvedChatId, message, deletedAt);
+    // Fire-and-forget: this reads from the media cache, and the seam must stay
+    // synchronous so upstream's delete flow is not held up.
+    void keepMediaFor(message);
 
     global = updateChatMessage(global, resolvedChatId, id, {
       isModDeleted: true,
@@ -351,6 +389,9 @@ export default definePlugin({
     applyDeleteStyle();
     applyStoragePolicy();
     installFlushHandlers();
+    // Put saved blobs back into telegram-tt's cache before anything renders, so its own
+    // media loader finds them without knowing we exist.
+    void restoreMedia();
   },
 
   stop() {
