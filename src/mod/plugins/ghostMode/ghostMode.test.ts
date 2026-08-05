@@ -161,21 +161,43 @@ describe('staying offline through activity', () => {
     expect(calls.length).toBeGreaterThan(early);
   });
 
-  it('answers a burst from its end, not once per request', async () => {
+  it('asserts immediately, without waiting for a timer', async () => {
+    // The flip is only as long as the assertion takes to arrive, so it goes out behind
+    // the send rather than a second and a half later.
     const { api } = await bootWith({ GhostMode: { enabled: true } });
-
-    api.interceptApiCall('sendMessage', [{ text: 'a' }]);
-    await vi.advanceTimersByTimeAsync(1000);
-    api.interceptApiCall('sendMessage', [{ text: 'b' }]);
     calls.length = 0;
 
-    // The first request's assertions were restarted by the second, so nothing has landed
-    // yet at the point the first one would have fired.
-    await vi.advanceTimersByTimeAsync(600);
-    expect(calls).toHaveLength(0);
+    api.interceptApiCall('sendMessage', [{ text: 'hi' }]);
 
-    await vi.advanceTimersByTimeAsync(1000);
+    expect(calls).toContainEqual(['updateIsOnline', false]);
+  });
+
+  it('still answers a steady exchange rather than deferring forever', async () => {
+    // Coalescing alone means each message restarts the follow-ups and none ever fires, so
+    // someone typing continuously would stay visible the whole time.
+    const { api } = await bootWith({ GhostMode: { enabled: true } });
+    calls.length = 0;
+
+    for (let i = 0; i < 5; i++) {
+      api.interceptApiCall('sendMessage', [{ text: String(i) }]);
+      // Always shorter than the first follow-up, so only the immediate path can fire.
+      await vi.advanceTimersByTimeAsync(300);
+    }
+
     expect(calls.length).toBeGreaterThan(0);
+  });
+
+  it('does not turn a fast exchange into a stream of status updates', async () => {
+    const { api } = await bootWith({ GhostMode: { enabled: true } });
+    calls.length = 0;
+
+    // Ten sends inside one second: the floor allows one immediate assertion.
+    for (let i = 0; i < 10; i++) {
+      api.interceptApiCall('sendMessage', [{ text: String(i) }]);
+      await vi.advanceTimersByTimeAsync(50);
+    }
+
+    expect(calls).toHaveLength(1);
   });
 
   it('keeps asserting on a heartbeat, for activity it cannot see', async () => {

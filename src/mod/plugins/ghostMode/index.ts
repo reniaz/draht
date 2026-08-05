@@ -45,16 +45,31 @@ const ACTIVITY_METHODS = [
 ];
 
 /**
- * Re-assert at several points after activity, not once.
+ * Follow-up assertions after activity, in milliseconds.
  *
  * A single assertion races the request it is answering. The guard sees a request as it is
  * *issued*; the server marks you online when it *processes* it, which for anything
- * carrying an upload can be seconds later. An assertion that lands first is simply
- * overwritten, and you are visible again with nothing further scheduled. Repeating past
- * the point where the send has certainly completed removes the race rather than betting
- * on a delay that is long enough.
+ * carrying an upload is later. An assertion that lands first is simply overwritten, and
+ * you are visible again with nothing further scheduled — so these continue past the point
+ * where the send has certainly completed rather than betting on one delay being enough.
+ *
+ * The window cannot be closed entirely from here. Sending marks you online server-side,
+ * and the only thing that undoes it is another request arriving afterwards; there is no
+ * way to ask for a send that does not count as activity. What is controllable is how long
+ * the flip lasts, which is why the first assertion goes out immediately (below) instead of
+ * waiting: MTProto processes a connection's requests in order, so one issued right behind
+ * the send is processed right behind it too.
  */
-const REASSERT_DELAYS_MS = [1500, 6000, 15_000];
+const REASSERT_DELAYS_MS = [400, 1500, 6000, 15_000];
+
+/**
+ * Floor between immediate assertions.
+ *
+ * Every sent message triggers one, and a fast exchange would otherwise turn into a stream
+ * of status updates. A second is short enough to be invisible and long enough not to
+ * become traffic of its own.
+ */
+const MIN_IMMEDIATE_GAP_MS = 1000;
 
 /**
  * Bounds how long any activity the list above does not cover can leave you visible.
@@ -66,6 +81,7 @@ const HEARTBEAT_MS = 30_000;
 
 let heartbeat: number | undefined;
 let reassertTimers: number[] = [];
+let lastImmediateAt = 0;
 
 function assertOffline() {
   // Goes through the interceptor below, which pins the argument to false regardless.
@@ -80,8 +96,16 @@ function clearReasserts() {
 }
 
 function scheduleReassert() {
-  // Restarted on each request, so a burst of activity is answered once — from the end of
-  // the burst, which is the point that matters.
+  // Immediately, not only on a timer. Coalescing alone means a steady exchange keeps
+  // restarting the follow-ups and none of them ever fires, so you stay visible for as
+  // long as you keep typing — the opposite of what this is for.
+  const now = Date.now();
+  if (now - lastImmediateAt >= MIN_IMMEDIATE_GAP_MS) {
+    lastImmediateAt = now;
+    assertOffline();
+  }
+
+  // Restarted on each request, so a burst is followed up from its end.
   clearReasserts();
 
   reassertTimers = REASSERT_DELAYS_MS.map(
@@ -92,6 +116,7 @@ function scheduleReassert() {
 function stopAsserting() {
   if (heartbeat) self.clearInterval(heartbeat);
   heartbeat = undefined;
+  lastImmediateAt = 0;
   clearReasserts();
 }
 
