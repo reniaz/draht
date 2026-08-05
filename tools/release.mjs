@@ -165,6 +165,16 @@ runLive('npm', ['run', 'mod:verify']);
 console.log('\nBuilding...\n');
 runLive('npm', ['run', 'mod:build']);
 
+/*
+ * Prove the build actually starts before shipping it.
+ *
+ * v1.0.0 shipped a main process that died at import time, because "the process is still
+ * running" was mistaken for proof it worked — a modal error dialog keeps the process
+ * running. This waits for the app to serve.
+ */
+console.log('\nChecking the app boots...\n');
+runLive('npm', ['run', 'mod:check:app']);
+
 console.log(`\nTagging ${tag}...\n`);
 run('git', ['tag', '-a', tag, '-m', `Draht ${version}`]);
 runLive('git', ['push', 'origin', tag]);

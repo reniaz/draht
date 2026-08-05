@@ -5,7 +5,7 @@
   "author": "Alexander Zinchuk (alexander@zinchuk.com)",
   "license": "GPL-3.0-or-later",
   "type": "module",
-  "main": "electron/dist/main.js",
+  "main": "electron/dist/main.cjs",
   "scripts": {
     "dev": "cross-env APP_ENV=development vite --mode development",
     "dev:mocked": "cross-env APP_ENV=test APP_MOCKED_CLIENT=1 vite --mode development --port 1235",
@@ -25,9 +25,9 @@
     "mod:verify": "npm run mod:check && npm run mod:test && npm run mod:diff",
     "mod:check": "tsc -p electron/tsconfig.json",
     "mod:shell": "npm run mod:check && tsup --config electron/tsup.config.ts",
-    "mod:smoke": "npm run mod:shell && electron electron/dist/smoke.js",
-    "mod:start": "npm run mod:shell && electron electron/dist/main.js",
-    "mod:dev": "npm run mod:shell && concurrently -k -n vite,electron \"npm run dev\" \"wait-on http://localhost:1234 && cross-env MOD_DEV_URL=http://localhost:1234 electron electron/dist/main.js\"",
+    "mod:smoke": "npm run mod:shell && electron electron/dist/smoke.cjs",
+    "mod:start": "npm run mod:shell && electron electron/dist/main.cjs",
+    "mod:dev": "npm run mod:shell && concurrently -k -n vite,electron \"npm run dev\" \"wait-on http://localhost:1234 && cross-env MOD_DEV_URL=http://localhost:1234 electron electron/dist/main.cjs\"",
     "mod:build": "npm run build:production && npm run mod:shell",
     "mod:package": "npm run mod:build && electron-builder --win nsis",
     "mod:package:dir": "npm run mod:build && electron-builder --dir",
@@ -51,7 +51,8 @@
     "mod:secrets": "node tools/check-secrets.mjs",
     "mod:secrets:install": "node tools/install-hook.mjs",
     "mod:release": "node tools/release.mjs",
-    "mod:publish": "electron-builder --win nsis --publish always"
+    "mod:publish": "electron-builder --win nsis --publish always",
+    "mod:check:app": "node tools/check-app.mjs"
   },
   "engines": {
     "node": "^24.11 || ^26",

@@ -13,12 +13,12 @@
  */
 import { app, BrowserWindow } from 'electron';
 import { existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join, resolve } from 'node:path';
 
 import { startWebServer } from './server';
 
-const DIR_NAME = dirname(fileURLToPath(import.meta.url));
+// CommonJS output (see tsup.config.ts), so __dirname is available directly.
+const DIR_NAME = __dirname;
 const WEB_ROOT = resolve(DIR_NAME, '..', '..', 'build');
 
 const PROBE = `(async () => {

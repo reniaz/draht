@@ -1,14 +1,14 @@
 import { app, BrowserWindow, dialog, shell } from 'electron';
 import { existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join, resolve } from 'node:path';
 
 import { startWebServer, type WebServer } from './server';
 import { initUpdater } from './updater';
 
-const DIR_NAME = dirname(fileURLToPath(import.meta.url));
+// CommonJS output (see tsup.config.ts), so __dirname is available directly.
+const DIR_NAME = __dirname;
 
-// The built web app. `electron/dist/main.js` -> repo root -> `build`.
+// The built web app. `electron/dist/main.cjs` -> repo root -> `build`.
 // Not `dist/` — upstream tracks that directory in git, and our builds embed the API
 // credentials, so building into it risks committing them. See vite.config.ts.
 const WEB_ROOT = resolve(DIR_NAME, '..', '..', 'build');
