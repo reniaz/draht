@@ -50,7 +50,8 @@
     "postversion": "echo $(node -p \"require('./package.json').version\") > public/version.txt && git commit --amend --no-verify --no-edit public/version.txt",
     "mod:secrets": "node tools/check-secrets.mjs",
     "mod:secrets:install": "node tools/install-hook.mjs",
-    "mod:release": "npm run mod:build && electron-builder --win nsis --publish always"
+    "mod:release": "node tools/release.mjs",
+    "mod:publish": "electron-builder --win nsis --publish always"
   },
   "engines": {
     "node": "^24.11 || ^26",

@@ -115,8 +115,21 @@ need them.
 | `npm run mod:start` | Run the built app |
 | `npm run mod:build` | Build the web app and the shell |
 | `npm run mod:package` | Build a Windows installer into `release/` |
-| `npm run mod:release` | Build and publish a GitHub Release (needs `GH_TOKEN`) |
+| `npm run mod:release` | Tag, build and publish a GitHub Release (needs `GH_TOKEN`) |
 | `npm run mod:verify` | Typecheck, tests, and the upstream diff budget |
+
+### Releasing
+
+```bash
+npm run mod:release
+```
+
+Bump `version` in `package.json` first. The script refuses to publish unless the working
+tree is clean and pushed, so the released binary always corresponds to a commit anyone can
+check out — then tags that commit, builds, and uploads the installer plus the update
+manifest to a GitHub Release. Installed copies pick it up on their next launch.
+
+Needs `GH_TOKEN` (a GitHub token with `repo` scope).
 
 Architecture and contributor notes live in **[README.mod.md](README.mod.md)** — how the
 plugin system hooks into upstream, and how to rebase onto new telegram-tt releases.
