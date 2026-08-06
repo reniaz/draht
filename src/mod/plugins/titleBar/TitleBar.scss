@@ -1,36 +1,50 @@
 // The system frame is gone, so the page draws the bar.
 //
-// Deliberately not styled as chrome: no panel colour of its own, no dividing line, the
-// same muted text as any other secondary label. It should read as the top edge of the
-// client rather than as a strip bolted above it — which is what the system bar looked
-// like, and the reason for replacing it.
+// It uses the same surface as the panels below it — `--color-background`, the colour of
+// the left column's own header — so the top of the window reads as one piece rather than
+// as a strip of chrome laid over the client.
 //
-// The app is shifted down by exactly this height rather than running underneath. An
+// The app is shifted down by exactly the bar's height rather than running underneath. An
 // overlay would cover the left column header and the chat header, and content sliding
-// under the buttons is what made them look like they were floating over the wallpaper.
+// under the buttons is what made them look detached from the window.
 :root {
   --draht-titlebar-height: 2rem;
+  // What is left reachable at the top edge while the bar is hidden. Enough to hit without
+  // aiming, small enough not to steal clicks from the app.
+  --draht-titlebar-peek: 0.375rem;
 }
 
-.draht-titlebar {
+.draht-titlebar-host {
   position: fixed;
   z-index: 100;
   top: 0;
   right: 0;
   left: 0;
 
+  height: var(--draht-titlebar-height);
+}
+
+.draht-titlebar {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
 
   height: var(--draht-titlebar-height);
-  padding-left: 0.875rem;
+  padding-left: 0.75rem;
 
-  // Inherits whatever is behind it: the page background, which is the same surface the
-  // rest of the client sits on.
-  background-color: var(--color-background-secondary);
+  background-color: var(--color-background);
 
   -webkit-app-region: drag;
   user-select: none;
+
+  transition: transform 150ms ease-out;
+}
+
+.draht-titlebar-icon {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .draht-titlebar-text {
@@ -40,7 +54,6 @@
 
   font-size: 0.75rem;
   color: var(--color-text-secondary);
-  opacity: 0.75;
 }
 
 .draht-titlebar-buttons {
@@ -48,7 +61,7 @@
   margin-left: auto;
   height: 100%;
 
-  // The buttons are the one part of the bar that must not drag the window.
+  // The one part of the bar that must not drag the window.
   -webkit-app-region: no-drag;
 }
 
@@ -73,8 +86,7 @@
     height: 10px;
     fill: none;
     stroke: currentColor;
-    // Crisp at the sizes these glyphs are drawn: a thicker stroke smudges, a thinner one
-    // disappears on a non-integer scale factor.
+    // Crisp at this size: thicker smudges, thinner disappears on a fractional scale.
     stroke-width: 1;
   }
 
@@ -99,10 +111,12 @@ body.draht-frameless {
   #root {
     box-sizing: border-box;
     padding-top: var(--draht-titlebar-height);
+    transition: padding-top 150ms ease-out;
   }
 
   // Dragging by the headers as well, since the bar itself is deliberately thin.
   .LeftMainHeader,
+  .left-header,
   .MiddleHeader {
     -webkit-app-region: drag;
   }
@@ -113,10 +127,50 @@ body.draht-frameless {
   .LeftMainHeader input,
   .LeftMainHeader .SearchInput,
   .LeftMainHeader .DropdownMenu,
+  .left-header button,
+  .left-header input,
+  .left-header .SearchInput,
   .MiddleHeader button,
   .MiddleHeader input,
   .MiddleHeader .ChatInfo,
   .MiddleHeader .Transition {
     -webkit-app-region: no-drag;
+  }
+}
+
+/*
+ * Maximised: the bar gets out of the way.
+ *
+ * A window filling the screen was maximised to see more of the thing in it, and a
+ * permanent strip of chrome across the top is the opposite of that. The bar slides up,
+ * leaving a few pixels to aim at, and comes back when the cursor reaches them — pushing
+ * the app down while it is there rather than covering it, so nothing is ever hidden
+ * underneath.
+ */
+body.draht-frameless.draht-maximized {
+  .draht-titlebar-host {
+    height: var(--draht-titlebar-peek);
+  }
+
+  .draht-titlebar {
+    transform: translateY(-100%);
+  }
+
+  #root {
+    padding-top: 0;
+  }
+
+  &:has(.draht-titlebar-host:hover) {
+    .draht-titlebar-host {
+      height: var(--draht-titlebar-height);
+    }
+
+    .draht-titlebar {
+      transform: none;
+    }
+
+    #root {
+      padding-top: var(--draht-titlebar-height);
+    }
   }
 }
