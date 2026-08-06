@@ -23,7 +23,7 @@
     "mod:diff": "node tools/check-diff.mjs",
     "mod:icon": "node tools/build-icon.mjs",
     "mod:verify": "npm run mod:check && npm run mod:test && npm run mod:diff",
-    "mod:check": "tsc -p electron/tsconfig.json",
+    "mod:check": "tsc -p tsconfig.json --noEmit && tsc -p electron/tsconfig.json",
     "mod:shell": "npm run mod:check && tsup --config electron/tsup.config.ts",
     "mod:smoke": "npm run mod:shell && electron electron/dist/smoke.cjs",
     "mod:start": "npm run mod:shell && electron electron/dist/main.cjs",
