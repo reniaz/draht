@@ -128,7 +128,10 @@ function createWindow(startUrl: string, appOrigin: string) {
 
   void win.loadURL(startUrl);
 
-  if (IS_DEV) {
+  // Not opened automatically any more: DevTools draws a size badge over the top-right of
+  // the window whenever it is resized, which on a frameless window sits exactly where the
+  // title bar buttons are. Set DRAHT_DEVTOOLS=1 to get it back.
+  if (IS_DEV && process.env.DRAHT_DEVTOOLS) {
     win.webContents.openDevTools({ mode: 'detach' });
   }
 

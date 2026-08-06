@@ -48,6 +48,45 @@ const TitleBar: FC = () => {
     return () => document.body.classList.remove('draht-maximized');
   }, [isMaximized]);
 
+  /*
+   * Revealing it is tracked here rather than left to `:hover`.
+   *
+   * A hover has no memory: the trigger is a few pixels at the very top, so the bar
+   * disappeared again the instant the pointer moved off them — which is on the way to the
+   * bar, making it almost impossible to click. Opening on the top edge and closing only
+   * once the pointer is clear of the whole bar gives it somewhere to be.
+   */
+  useEffect(() => {
+    if (!isMaximized) {
+      document.body.classList.remove('draht-titlebar-open');
+      return undefined;
+    }
+
+    const REVEAL_AT = 4;
+    // Past the bar itself, not past the trigger, so crossing the bar cannot close it.
+    const HIDE_BELOW = 40;
+
+    const onMove = (e: MouseEvent) => {
+      if (e.clientY <= REVEAL_AT) document.body.classList.add('draht-titlebar-open');
+      else if (e.clientY > HIDE_BELOW) document.body.classList.remove('draht-titlebar-open');
+    };
+
+    // Leaving through the top — into the bar's own buttons, or off the window — must not
+    // count as moving away from it.
+    const onLeave = (e: MouseEvent) => {
+      if (e.clientY > HIDE_BELOW) document.body.classList.remove('draht-titlebar-open');
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseleave', onLeave);
+
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseleave', onLeave);
+      document.body.classList.remove('draht-titlebar-open');
+    };
+  }, [isMaximized]);
+
   // Outside Electron there is a real title bar already, and these buttons would do nothing.
   if (!window.draht?.closeWindow) return undefined;
 
