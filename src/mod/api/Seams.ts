@@ -63,6 +63,9 @@ export type MessageMenuItems = (message: ApiMessage) => TeactNode | undefined;
  */
 export type MessageExtra = (message: ApiMessage) => TeactNode | undefined;
 
+/** Extra rows in a profile, below the phone number and username. */
+export type ProfileExtra = (peerId: string) => TeactNode | undefined;
+
 /**
  * The chat list builds its menu from descriptors rather than rendering nodes, so this
  * seam matches that shape instead of forcing a node through it.
@@ -101,6 +104,7 @@ type SeamRegistry = {
   messageClassNames: MessageClassNames[];
   messageMenuItems: MessageMenuItems[];
   messageExtra: MessageExtra[];
+  profileExtra: ProfileExtra[];
   chatMenuItems: ChatMenuItems[];
   openChatInNewTab: OpenChatInNewTab[];
   openOwnProfile: OpenOwnProfile[];
@@ -112,6 +116,7 @@ const seams: SeamRegistry = {
   messageClassNames: [],
   messageMenuItems: [],
   messageExtra: [],
+  profileExtra: [],
   chatMenuItems: [],
   openChatInNewTab: [],
   openOwnProfile: [],
@@ -311,6 +316,25 @@ export function runMessageExtra(message: ApiMessage): TeactNode[] {
       if (node) nodes.push(node);
     } catch (err) {
       modLogger.error('messageExtra seam failed', err);
+    }
+  }
+
+  return nodes;
+}
+
+/** Called inside upstream `ChatExtra`, after the rows it renders itself. */
+export function runProfileExtra(peerId: string): TeactNode[] {
+  const list = seams.profileExtra;
+  if (!list.length) return [];
+
+  const nodes: TeactNode[] = [];
+
+  for (const fn of list) {
+    try {
+      const node = fn(peerId);
+      if (node) nodes.push(node);
+    } catch (err) {
+      modLogger.error('profileExtra seam failed', err);
     }
   }
 

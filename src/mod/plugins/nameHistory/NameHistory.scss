@@ -1,0 +1,16 @@
+.draht-name-history-entry {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.draht-name-history-value {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.draht-name-history-date {
+  flex-shrink: 0;
+  opacity: 0.7;
+}

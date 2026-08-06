@@ -71,6 +71,9 @@ import BusinessHours from './BusinessHours';
 import UserBirthday from './UserBirthday';
 
 import styles from './ChatExtra.module.scss';
+// #region mod
+import { runProfileExtra } from '../../../mod/api/Seams';
+// #endregion mod
 
 type OwnProps = {
   chatOrUserId: string;
@@ -452,6 +455,9 @@ const ChatExtra = ({
           </ListItem>
         )}
         {activeUsernames && renderUsernames(activeUsernames)}
+        {/* #region mod */}
+        {peerId && runProfileExtra(peerId)}
+        {/* #endregion mod */}
         {description && Boolean(description.length) && (
           <ListItem
             icon="info"
