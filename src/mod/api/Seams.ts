@@ -55,6 +55,15 @@ export type MessageClassNames = (
 export type MessageMenuItems = (message: ApiMessage) => TeactNode | undefined;
 
 /**
+ * Extra content rendered inside a message, after its text.
+ *
+ * The one place a plugin can add to what a message *says* rather than how it looks. Used
+ * to show what a message said before it was edited, which is only meaningful next to what
+ * it says now.
+ */
+export type MessageExtra = (message: ApiMessage) => TeactNode | undefined;
+
+/**
  * The chat list builds its menu from descriptors rather than rendering nodes, so this
  * seam matches that shape instead of forcing a node through it.
  */
@@ -91,6 +100,7 @@ type SeamRegistry = {
   beforeDeleteMessages: BeforeDeleteMessages[];
   messageClassNames: MessageClassNames[];
   messageMenuItems: MessageMenuItems[];
+  messageExtra: MessageExtra[];
   chatMenuItems: ChatMenuItems[];
   openChatInNewTab: OpenChatInNewTab[];
   openOwnProfile: OpenOwnProfile[];
@@ -101,6 +111,7 @@ const seams: SeamRegistry = {
   beforeDeleteMessages: [],
   messageClassNames: [],
   messageMenuItems: [],
+  messageExtra: [],
   chatMenuItems: [],
   openChatInNewTab: [],
   openOwnProfile: [],
@@ -280,4 +291,28 @@ export function runSuppressFirstUnread(): boolean {
   }
 
   return false;
+}
+
+/**
+ * Called at the end of upstream `MessageText`, after the text itself.
+ *
+ * Returns nodes to append. Nothing is returned when no plugin wants to add anything, which
+ * is the usual case and costs one array check per rendered message.
+ */
+export function runMessageExtra(message: ApiMessage): TeactNode[] {
+  const list = seams.messageExtra;
+  if (!list.length) return [];
+
+  const nodes: TeactNode[] = [];
+
+  for (const fn of list) {
+    try {
+      const node = fn(message);
+      if (node) nodes.push(node);
+    } catch (err) {
+      modLogger.error('messageExtra seam failed', err);
+    }
+  }
+
+  return nodes;
 }

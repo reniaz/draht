@@ -1,0 +1,30 @@
+// Struck through as well as coloured. Colour alone is not enough — the theme's deleted
+// colour is configurable and could be set to something close to the text colour, and a
+// reader who cannot distinguish it would see two versions of a message with nothing
+// saying which one counts.
+.draht-edits {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(var(--draht-deleted-rgb, 224, 85, 97), 0.35);
+}
+
+.draht-edit {
+  font-size: 0.9375rem;
+  color: var(--draht-deleted, #e05561);
+  text-decoration: line-through;
+  text-decoration-color: rgba(var(--draht-deleted-rgb, 224, 85, 97), 0.5);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.draht-edit + .draht-edit {
+  margin-top: 0.125rem;
+  opacity: 0.75;
+}
+
+.draht-edit-more {
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+}

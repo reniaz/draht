@@ -19,6 +19,9 @@ import useSyncEffect from '../../hooks/useSyncEffect';
 import useUniqueId from '../../hooks/useUniqueId';
 
 import TypingWrapper from './TypingWrapper';
+// #region mod
+import { runMessageExtra } from '../../mod/api/Seams';
+// #endregion mod
 
 interface OwnProps {
   messageOrStory: ApiMessage | ApiStory;
@@ -168,6 +171,9 @@ function MessageText({
             completionKey={messageOrStory.id}
           />
         ) : renderText(textToRender),
+        // #region mod
+        ...('chatId' in messageOrStory ? runMessageExtra(messageOrStory) : []),
+        // #endregion mod
       ].flat().filter(Boolean)}
     </>
   );

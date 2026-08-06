@@ -23,6 +23,9 @@ const ALLOWLIST = {
   'src/global/actions/apiUpdaters/messages.ts': 10,
   'src/components/middle/message/Message.tsx': 6,
 
+  // Shows what a message said before it was edited, next to what it says now.
+  'src/components/common/MessageText.tsx': 8,
+
   // Suppresses the unread marker, which is permanently stale once read receipts are
   // hidden — and which upstream trusts when deciding whether a new message may join the
   // viewport at all.

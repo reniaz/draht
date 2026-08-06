@@ -16,6 +16,7 @@ import {
   keepMediaFor, restoreMedia, setMediaLimits, setMediaPersistence,
 } from './mediaStore';
 import { clearChatLog, hasChatLog, openLogViewer } from './actions';
+import EditedText from './EditedText';
 import {
   clearRecent, recall, recallChatId, remember,
 } from './recentMessages';
@@ -91,6 +92,21 @@ const settings = definePluginSettings({
       { label: 'Persist anyway (readable on disk)', value: 'always' },
     ],
     onChange: () => applyStoragePolicy(),
+  },
+  inlineEdits: {
+    type: OptionType.BOOLEAN,
+    displayName: 'Show edits in the message',
+    description:
+      'Puts what a message said before under what it says now, in the deleted colour from '
+      + 'your theme. An edit is only meaningful next to what replaced it, and a modal you '
+      + 'have to go and open is a record nobody reads.',
+    default: true,
+  },
+  maxInlineEdits: {
+    type: OptionType.NUMBER,
+    displayName: 'Earlier versions to show',
+    description: 'The rest stay in the edit history, reachable from the message menu.',
+    default: 2,
   },
   maxPerChat: {
     type: OptionType.NUMBER,
@@ -384,6 +400,15 @@ export default definePlugin({
     beforeDeleteMessages: protectMessages,
     messageClassNames: deletedClassName,
     messageMenuItems: (message) => <MessageLogMenuItems message={message} />,
+
+    messageExtra: (message: ApiMessage) => (settings.store.inlineEdits
+      ? (
+        <EditedText
+          message={message}
+          limit={Math.max(1, Number(settings.store.maxInlineEdits) || 2)}
+        />
+      )
+      : undefined),
     chatMenuItems: (chatId) => {
       const items: MenuItemContextAction[] = [{
         // Always offered, not gated on `hasChatLog`: after a restart the log lives only
