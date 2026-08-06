@@ -1,7 +1,9 @@
+import { copyTextToClipboard } from '../../../util/clipboard';
+
 import { modLogger } from '../../api/Logger';
 import { definePlugin } from '../../api/types';
 import {
-  hiddenAncestor, SHOWN_CLASS, tagPii, untagPii,
+  COPIED_CLASS, resolveClick, SHOWN_CLASS, tagPii, untagPii,
 } from './pii';
 
 import './HidePii.scss';
@@ -32,21 +34,36 @@ function scheduleScan() {
 }
 
 /**
- * Reveals what was clicked, and swallows that click.
+ * One click reveals, the next copies.
  *
- * The rows are buttons — a username opens a QR code or collectible info — so without this
- * the first click would both reveal the value and act on it. Capture phase, because the
- * row's own handler would otherwise run first. Once revealed, clicks pass through as
- * normal, so the row stays usable.
+ * Both swallow the event. These rows are buttons — a username opens a QR code, a phone
+ * number a collectible lookup — so a click that fell through would reveal and act at once,
+ * which is what the two-step exists to avoid. Capture phase, because the row's own handler
+ * would otherwise run first.
  */
 function handleClick(e: MouseEvent) {
-  const hidden = hiddenAncestor(e.target as Element | null);
-  if (!hidden) return;
+  const hit = resolveClick(e.target as Element | null);
+  if (!hit) return;
 
   e.preventDefault();
   e.stopPropagation();
 
-  hidden.classList.add(SHOWN_CLASS);
+  if (hit.action === 'reveal') {
+    hit.element.classList.add(SHOWN_CLASS);
+    return;
+  }
+
+  try {
+    copyTextToClipboard(hit.element.textContent || '');
+
+    // Restarted rather than merely added, so copying twice flashes twice instead of
+    // looking like nothing happened the second time.
+    hit.element.classList.remove(COPIED_CLASS);
+    void (hit.element as HTMLElement).offsetWidth;
+    hit.element.classList.add(COPIED_CLASS);
+  } catch (err) {
+    logger.error('could not copy', err);
+  }
 }
 
 export default definePlugin({

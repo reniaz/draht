@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  hiddenAncestor, PII_CLASS, SHOWN_CLASS, tagPii, untagPii,
+  COPIED_CLASS, PII_CLASS, resolveClick, SHOWN_CLASS, tagPii, untagPii,
 } from './pii';
 
 function profile() {
@@ -76,25 +76,36 @@ describe('hiding profile PII', () => {
     tagPii(profile());
     const inner = document.querySelector('.other-usernames')!;
 
-    expect(hiddenAncestor(inner)).toBe(inner);
+    expect(resolveClick(inner)).toEqual({ element: inner, action: 'reveal' });
   });
 
-  it('reports nothing once revealed, so the row becomes clickable again', () => {
+  it('copies on the click after the one that revealed it', () => {
     tagPii(profile());
     const phone = document.querySelector(`.title.${PII_CLASS}`)!;
-    phone.classList.add(SHOWN_CLASS);
 
-    expect(hiddenAncestor(phone)).toBeUndefined();
+    expect(resolveClick(phone)!.action).toBe('reveal');
+    phone.classList.add(SHOWN_CLASS);
+    expect(resolveClick(phone)!.action).toBe('copy');
+  });
+
+  it('ignores clicks outside a tagged value', () => {
+    tagPii(profile());
+
+    // The label, and the row itself, must keep their own behaviour.
+    expect(resolveClick(document.querySelector('.subtitle'))).toBeUndefined();
+    expect(resolveClick(null)).toBeUndefined();
   });
 
   it('leaves no trace when switched off', () => {
     const root = profile();
     tagPii(root);
     document.querySelector(`.${PII_CLASS}`)!.classList.add(SHOWN_CLASS);
+    document.querySelector(`.${PII_CLASS}`)!.classList.add(COPIED_CLASS);
 
     untagPii(root);
 
     expect(document.querySelectorAll(`.${PII_CLASS}`)).toHaveLength(0);
     expect(document.querySelectorAll(`.${SHOWN_CLASS}`)).toHaveLength(0);
+    expect(document.querySelectorAll(`.${COPIED_CLASS}`)).toHaveLength(0);
   });
 });

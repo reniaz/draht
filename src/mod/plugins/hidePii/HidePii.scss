@@ -1,34 +1,67 @@
-// Blurred rather than replaced with dots: the shape of the value stays visible, so a
-// profile still looks like a profile, and it is obvious there is something there to
-// reveal rather than a field that failed to load.
+// Hidden by drawing the text as its own shadow rather than with `filter: blur`.
 //
-// Scoped to the body class so the rules do nothing at all while the plugin is off, even
-// if a stale tag survived somewhere.
+// A filter blurs the element's rendered box, which on inline text gives an uneven smear —
+// a short value like a username collapses into a solid bar while a long one stays legible
+// at the edges. Painting the glyphs transparent and casting a soft shadow of them keeps
+// the shape and the length visible, blurs evenly regardless of how much text there is, and
+// cannot be read back by selecting it, because there is nothing rendered to select.
+//
+// Scoped to the body class so the rules do nothing while the plugin is off, even if a
+// stale tag survived somewhere.
 body.draht-hiding-pii {
   .draht-pii {
+    // A chip, so it reads as deliberately withheld rather than as text that failed to
+    // load. Inline-block also gives the shadow a clean box to sit in.
+    display: inline-block;
+    padding: 0 0.375rem;
+    border-radius: var(--border-radius-default-tiny, 0.375rem);
+
     cursor: var(--custom-cursor, pointer);
 
-    // Enough that small text cannot be read back from a screenshot or a video call.
-    filter: blur(0.3rem);
+    color: transparent;
+    background-color: var(--color-background-secondary);
+    text-shadow: 0 0 0.5rem var(--color-text-secondary);
 
-    // Stops it being copied, or selected and read from the selection highlight, while
-    // hidden.
+    // Nothing to select, but this also stops the double-click-to-select gesture.
     user-select: none;
 
-    transition: filter 150ms ease-out;
+    transition: background-color 150ms ease-out, text-shadow 150ms ease-out;
 
     &:hover {
-      filter: blur(0.25rem);
+      background-color: var(--color-chat-hover);
+      text-shadow: 0 0 0.45rem var(--color-text);
     }
   }
 
   .draht-pii-shown {
-    cursor: inherit;
-    filter: none;
+    display: inline;
+    padding: 0;
+
+    cursor: var(--custom-cursor, pointer);
+
+    color: inherit;
+    background-color: transparent;
+    text-shadow: none;
     user-select: auto;
 
     &:hover {
-      filter: none;
+      background-color: transparent;
+      text-shadow: none;
     }
+  }
+
+  // Brief confirmation, since a copy is otherwise invisible.
+  .draht-pii-copied {
+    animation: draht-pii-flash 700ms ease-out;
+  }
+}
+
+@keyframes draht-pii-flash {
+  0% {
+    background-color: rgba(var(--color-primary-rgb, 51, 144, 236), 0.35);
+  }
+
+  100% {
+    background-color: transparent;
   }
 }

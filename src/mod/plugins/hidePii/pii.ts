@@ -17,6 +17,9 @@ export const PII_CLASS = 'draht-pii';
 /** Marks one the user has chosen to reveal. */
 export const SHOWN_CLASS = 'draht-pii-shown';
 
+/** Brief highlight after a copy, since a copy is otherwise invisible. */
+export const COPIED_CLASS = 'draht-pii-copied';
+
 function isPiiRow(row: Element) {
   return PII_ICONS.some((icon) => row.querySelector(`.${icon}`));
 }
@@ -52,19 +55,28 @@ export function tagPii(root: ParentNode): number {
 /** Removes every trace, so turning the setting off restores the profile exactly. */
 export function untagPii(root: ParentNode) {
   for (const element of root.querySelectorAll(`.${PII_CLASS}`)) {
-    element.classList.remove(PII_CLASS, SHOWN_CLASS);
+    element.classList.remove(PII_CLASS, SHOWN_CLASS, COPIED_CLASS);
   }
 }
 
 /**
- * The hidden element a click landed on, if any.
+ * The tagged element a click landed on, and what that click should do.
  *
  * Walks up from the target because the click usually lands on a text node's parent — a
  * link inside `.other-usernames`, say — rather than on the tagged element itself.
+ *
+ * One click reveals, the next copies. Both are answered here rather than by the row's own
+ * handler, which would otherwise open a QR code or a collectible lookup on the way past.
  */
-export function hiddenAncestor(target: Element | null): Element | undefined {
-  const found = target?.closest(`.${PII_CLASS}`);
-  if (!found || found.classList.contains(SHOWN_CLASS)) return undefined;
+export function resolveClick(target: Element | null): {
+  element: Element;
+  action: 'reveal' | 'copy';
+} | undefined {
+  const element = target?.closest(`.${PII_CLASS}`);
+  if (!element) return undefined;
 
-  return found;
+  return {
+    element,
+    action: element.classList.contains(SHOWN_CLASS) ? 'copy' : 'reveal',
+  };
 }

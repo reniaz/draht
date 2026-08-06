@@ -49,9 +49,9 @@ const ModGeneral: FC = () => {
       <div className="draht-setting draht-setting-boolean">
         <Checkbox
           label="Blur phone numbers and usernames"
-          subLabel={'Hides identifying details in every profile, your own included, until '
-            + 'you click them. Display names are left alone. Nothing leaves this machine '
-            + 'either way — this only changes what is on your screen.'}
+          subLabel={'Hides identifying details in every profile, your own included. One '
+            + 'click reveals a value, a second copies it. Display names are left alone, '
+            + 'and nothing leaves this machine either way.'}
           checked={isPluginEnabled('HidePii')}
           onChange={(e) => toggle('HidePii', e.currentTarget.checked)}
         />
