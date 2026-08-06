@@ -82,20 +82,14 @@ function createWindow(startUrl: string, appOrigin: string) {
     autoHideMenuBar: true,
 
     /*
-     * The window's own bar is hidden and the controls are drawn over the page.
+     * No system frame at all: the bar and its buttons are drawn by the page.
      *
-     * `titleBarOverlay` rather than a fully frameless window with buttons of our own:
-     * these stay the real Windows controls, so snap layouts, the double-click-to-maximise
-     * gesture and every accessibility affordance keep working — while their colours follow
-     * the theme, which is the part that actually made the default bar look bolted on.
-     * Reimplementing them would have meant getting all of that right again, badly.
+     * The window stays resizable — Electron keeps the invisible resize border on a
+     * frameless window — and the behaviour the system frame provided is reimplemented
+     * where it is missed: double-clicking the bar maximises, and the buttons report their
+     * state so the maximise icon matches reality.
      */
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#1e1f1e',
-      symbolColor: '#c6b4a6',
-      height: 32,
-    },
+    frame: false,
 
     // caelus page background, so the window does not flash Telegram grey before paint.
     backgroundColor: '#1e1f1e',

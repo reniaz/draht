@@ -1,50 +1,27 @@
 import { definePlugin } from '../../api/types';
 
-import './TitleBar.scss';
-
 const BODY_CLASS = 'draht-frameless';
 
 /**
- * Reads a CSS colour off the page.
+ * The window's title bar and its buttons.
  *
- * The window controls are drawn by Windows, which knows nothing about the theme, so the
- * colour has to be measured here and handed over. Falls back to the caelus palette when a
- * variable is missing rather than to white, which would flash on every theme change.
- */
-function colourOf(name: string, fallback: string) {
-  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-
-  return value || fallback;
-}
-
-/**
- * Matches the window controls to the theme.
+ * Always on. The window is created without a system frame, so this is the only bar there
+ * is — turning it off would leave the app running under a fixed strip with no title, no
+ * way to move the window and no way to close it. A switch here would only offer a broken
+ * state, which is not a choice worth giving anyone.
  *
- * Deferred to the next frame: this runs on theme changes, and the variables are read back
- * off the document, which has to have applied them first.
+ * The bar itself is rendered from `ModRoot`, unconditionally like the other root-level
+ * components; this governs the layout shift and the drag regions around it.
  */
-export function syncTitleBar() {
-  requestAnimationFrame(() => {
-    window.draht?.setTitleBar?.(
-      colourOf('--color-background', '#1e1f1e'),
-      colourOf('--color-text-secondary', '#c6b4a6'),
-    );
-  });
-}
-
 export default definePlugin({
   name: 'TitleBar',
-  description: 'Drop the Windows title bar and colour the window controls with your theme.',
+  description: 'The window title bar, drawn by the client so it matches the theme.',
   authors: ['Draht'],
-  // Client behaviour, so the switch lives under Draht Settings -> General. The frame is
-  // already hidden by the time this runs — the plugin governs the drag regions and the
-  // colours, not whether the bar exists, which is decided when the window is created.
+  required: true,
   hidden: true,
-  enabledByDefault: true,
 
   start() {
     document.body.classList.add(BODY_CLASS);
-    syncTitleBar();
   },
 
   stop() {

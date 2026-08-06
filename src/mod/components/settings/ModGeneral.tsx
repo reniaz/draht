@@ -48,17 +48,6 @@ const ModGeneral: FC = () => {
 
       <div className="draht-setting draht-setting-boolean">
         <Checkbox
-          label="Colour the window frame with your theme"
-          subLabel={'Hides the Windows title bar and paints the window controls to match. '
-            + 'Turning it off leaves the controls their default colour; the bar itself is '
-            + 'set when the window opens, so that needs a restart.'}
-          checked={isPluginEnabled('TitleBar')}
-          onChange={(e) => toggle('TitleBar', e.currentTarget.checked)}
-        />
-      </div>
-
-      <div className="draht-setting draht-setting-boolean">
-        <Checkbox
           label="Blur phone numbers and usernames"
           subLabel={'Hides identifying details in every profile, your own included. One '
             + 'click reveals a value, a second copies it. Display names are left alone, '

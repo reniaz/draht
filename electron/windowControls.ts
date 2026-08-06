@@ -28,22 +28,25 @@ export function initWindowControls(getWindow: () => BrowserWindow | undefined) {
   });
 
   /**
-   * Recolours the window controls to match the theme.
+   * The window buttons, which the page draws and therefore has to operate.
    *
-   * The controls are drawn by Windows, so the renderer cannot style them — it can only say
-   * what colour they should be. Called whenever the theme changes, which is the only time
-   * the answer differs.
+   * Toggling rather than separate maximise and restore messages: the button is one control
+   * with two states, and having the renderer decide which to send would mean it holding a
+   * copy of the window state that can drift from the real one.
    */
-  ipcMain.on('draht:set-titlebar', (_event, colors: { color: string; symbolColor: string }) => {
+  ipcMain.on('draht:window-minimize', () => getWindow()?.minimize());
+
+  ipcMain.on('draht:window-toggle-maximize', () => {
     const window = getWindow();
     if (!window || window.isDestroyed()) return;
 
-    try {
-      window.setTitleBarOverlay({ ...colors, height: 32 });
-    } catch {
-      // Only supported where an overlay exists; elsewhere the frame is simply native.
-    }
+    if (window.isMaximized()) window.unmaximize();
+    else window.maximize();
   });
+
+  ipcMain.on('draht:window-close', () => getWindow()?.close());
+
+  ipcMain.handle('draht:window-is-maximized', () => Boolean(getWindow()?.isMaximized()));
 
   ipcMain.on('draht:flash-window', () => {
     const window = getWindow();

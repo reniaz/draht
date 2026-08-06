@@ -41,9 +41,28 @@ contextBridge.exposeInMainWorld('draht', {
     return ipcRenderer.invoke('draht:app-version');
   },
 
-  /** Recolours the window controls, which Windows draws and the page cannot style. */
-  setTitleBar(color: string, symbolColor: string) {
-    ipcRenderer.send('draht:set-titlebar', { color, symbolColor });
+  /** The window buttons, drawn by the page and so operated from it. */
+  minimizeWindow() {
+    ipcRenderer.send('draht:window-minimize');
+  },
+
+  toggleMaximizeWindow() {
+    ipcRenderer.send('draht:window-toggle-maximize');
+  },
+
+  closeWindow() {
+    ipcRenderer.send('draht:window-close');
+  },
+
+  isWindowMaximized(): Promise<boolean> {
+    return ipcRenderer.invoke('draht:window-is-maximized');
+  },
+
+  onMaximizeChange(callback: (isMaximized: boolean) => void) {
+    const handler = (_event: unknown, isMaximized: boolean) => callback(isMaximized);
+    ipcRenderer.on('draht:window-maximized', handler);
+
+    return () => ipcRenderer.off('draht:window-maximized', handler);
   },
 
   /** Restores and raises the window. `window.focus()` alone cannot do this in Electron. */

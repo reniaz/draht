@@ -1,18 +1,114 @@
-// With the window's own bar hidden, the page has to say where the window can be dragged.
+// The system frame is gone, so the page draws the bar.
 //
-// Drag regions are put on the headers that already exist rather than on a strip laid over
-// the top of the app. An overlay would swallow every click in the band it covers — which
-// on this layout is the hamburger, the search box and the chat header — and getting that
-// back means punching holes in it for each one. The headers are already the right shape.
+// Deliberately not styled as chrome: no panel colour of its own, no dividing line, the
+// same muted text as any other secondary label. It should read as the top edge of the
+// client rather than as a strip bolted above it — which is what the system bar looked
+// like, and the reason for replacing it.
+//
+// The app is shifted down by exactly this height rather than running underneath. An
+// overlay would cover the left column header and the chat header, and content sliding
+// under the buttons is what made them look like they were floating over the wallpaper.
+:root {
+  --draht-titlebar-height: 2rem;
+}
+
+.draht-titlebar {
+  position: fixed;
+  z-index: 100;
+  top: 0;
+  right: 0;
+  left: 0;
+
+  display: flex;
+  align-items: center;
+
+  height: var(--draht-titlebar-height);
+  padding-left: 0.875rem;
+
+  // Inherits whatever is behind it: the page background, which is the same surface the
+  // rest of the client sits on.
+  background-color: var(--color-background-secondary);
+
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.draht-titlebar-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  opacity: 0.75;
+}
+
+.draht-titlebar-buttons {
+  display: flex;
+  margin-left: auto;
+  height: 100%;
+
+  // The buttons are the one part of the bar that must not drag the window.
+  -webkit-app-region: no-drag;
+}
+
+.draht-titlebar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 2.875rem;
+  height: 100%;
+  padding: 0;
+
+  border: none;
+  background: transparent;
+  cursor: var(--custom-cursor, pointer);
+  color: var(--color-text-secondary);
+
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+
+  svg {
+    width: 10px;
+    height: 10px;
+    fill: none;
+    stroke: currentColor;
+    // Crisp at the sizes these glyphs are drawn: a thicker stroke smudges, a thinner one
+    // disappears on a non-integer scale factor.
+    stroke-width: 1;
+  }
+
+  &:hover {
+    color: var(--color-text);
+    background-color: var(--color-chat-hover);
+  }
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+// Red on hover, as every window on this platform does. Anything else reads as a button
+// that does something recoverable.
+.draht-titlebar-close:hover {
+  color: #fff;
+  background-color: #c42b1c;
+}
+
 body.draht-frameless {
+  #root {
+    box-sizing: border-box;
+    padding-top: var(--draht-titlebar-height);
+  }
+
+  // Dragging by the headers as well, since the bar itself is deliberately thin.
   .LeftMainHeader,
-  .MiddleHeader,
-  #MiddleColumn > .draht-tabbar {
+  .MiddleHeader {
     -webkit-app-region: drag;
   }
 
-  // Everything inside them that is meant to be operated, put back. A drag region eats
-  // clicks, so anything not listed here stops working the moment the frame goes.
+  // A drag region eats clicks, so everything meant to be operated has to be given back.
+  // Anything missed here silently stops working.
   .LeftMainHeader button,
   .LeftMainHeader input,
   .LeftMainHeader .SearchInput,
@@ -20,13 +116,7 @@ body.draht-frameless {
   .MiddleHeader button,
   .MiddleHeader input,
   .MiddleHeader .ChatInfo,
-  .MiddleHeader .Transition,
-  #MiddleColumn > .draht-tabbar .draht-tab {
+  .MiddleHeader .Transition {
     -webkit-app-region: no-drag;
-  }
-
-  // Room for the window controls, which Windows draws over the top right of the page.
-  .MiddleHeader {
-    padding-right: 8.5rem;
   }
 }

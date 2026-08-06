@@ -15,7 +15,11 @@ type DrahtNative = {
   focusWindow: () => void;
   flashWindow: () => void;
   appVersion?: () => Promise<string | undefined>;
-  setTitleBar?: (color: string, symbolColor: string) => void;
+  minimizeWindow?: () => void;
+  toggleMaximizeWindow?: () => void;
+  closeWindow?: () => void;
+  isWindowMaximized?: () => Promise<boolean>;
+  onMaximizeChange?: (callback: (isMaximized: boolean) => void) => NoneToVoidFunction;
   exportTheme?: (name: string, content: string) => Promise<string | undefined>;
   saveFile?: (name: string, content: string, title?: string) => Promise<string | undefined>;
   saveExport?: (
