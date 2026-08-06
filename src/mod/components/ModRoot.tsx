@@ -1,6 +1,7 @@
 import type { FC } from '../../lib/teact/teact';
 import { memo } from '../../lib/teact/teact';
 
+import BookmarksModal from '../plugins/bookmarks/BookmarksModal';
 import DeletedLogModal from '../plugins/messageLogger/DeletedLogModal';
 import HistoryModal from '../plugins/messageLogger/HistoryModal';
 import UpdateModal from './UpdateModal';
@@ -21,6 +22,7 @@ const ModRoot: FC = () => (
   <>
     <HistoryModal />
     <DeletedLogModal />
+    <BookmarksModal />
     <UpdateModal />
   </>
 );

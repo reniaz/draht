@@ -1,0 +1,44 @@
+.draht-bookmarks {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.draht-bookmarks-empty {
+  padding: 1rem 0;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.draht-bookmark {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-borders);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.draht-bookmark-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.draht-bookmark-sender {
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-primary);
+}
+
+.draht-bookmark-text {
+  margin-top: 0.125rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.draht-bookmark-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
