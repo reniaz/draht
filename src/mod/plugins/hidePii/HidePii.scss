@@ -1,64 +1,59 @@
-// Hidden by drawing the text as its own shadow rather than with `filter: blur`.
+// Redacted with a solid bar rather than a blur.
 //
-// A filter blurs the element's rendered box, which on inline text gives an uneven smear —
-// a short value like a username collapses into a solid bar while a long one stays legible
-// at the edges. Painting the glyphs transparent and casting a soft shadow of them keeps
-// the shape and the length visible, blurs evenly regardless of how much text there is, and
-// cannot be read back by selecting it, because there is nothing rendered to select.
+// Two blur approaches were tried and both looked wrong. `filter: blur` blurs the
+// element's rendered box, so the result depends on how much text there is — a username
+// collapsed into a smudged lump while a longer phone number stayed legible at its edges.
+// Casting the glyphs as their own shadow blurred evenly but still read as text that had
+// gone wrong rather than text deliberately withheld.
 //
-// Scoped to the body class so the rules do nothing while the plugin is off, even if a
-// stale tag survived somewhere.
+// A bar has no such ambiguity: it is obviously a cover, it is identical at every length,
+// and there is no rendered text to squint at, select, or recover from a screenshot.
 body.draht-hiding-pii {
   .draht-pii {
-    // A chip, so it reads as deliberately withheld rather than as text that failed to
-    // load. Inline-block also gives the shadow a clean box to sit in.
     display: inline-block;
-    padding: 0 0.375rem;
+    padding-inline: 0.375rem;
     border-radius: var(--border-radius-default-tiny, 0.375rem);
 
     cursor: var(--custom-cursor, pointer);
 
+    // Transparent glyphs keep the bar exactly as wide as the value it covers, so the
+    // layout does not shift when it is revealed.
     color: transparent;
-    background-color: var(--color-background-secondary);
-    text-shadow: 0 0 0.5rem var(--color-text-secondary);
+    background-color: var(--color-text-secondary);
+    opacity: 0.25;
 
-    // Nothing to select, but this also stops the double-click-to-select gesture.
     user-select: none;
 
-    transition: background-color 150ms ease-out, text-shadow 150ms ease-out;
+    transition: opacity 150ms ease-out;
 
     &:hover {
-      background-color: var(--color-chat-hover);
-      text-shadow: 0 0 0.45rem var(--color-text);
+      opacity: 0.4;
     }
   }
 
   .draht-pii-shown {
     display: inline;
-    padding: 0;
-
-    cursor: var(--custom-cursor, pointer);
+    padding-inline: 0;
 
     color: inherit;
     background-color: transparent;
-    text-shadow: none;
+    opacity: 1;
     user-select: auto;
 
     &:hover {
-      background-color: transparent;
-      text-shadow: none;
+      opacity: 1;
     }
   }
 
   // Brief confirmation, since a copy is otherwise invisible.
   .draht-pii-copied {
-    animation: draht-pii-flash 700ms ease-out;
+    animation: draht-pii-flash 600ms ease-out;
   }
 }
 
 @keyframes draht-pii-flash {
   0% {
-    background-color: rgba(var(--color-primary-rgb, 51, 144, 236), 0.35);
+    background-color: rgba(var(--color-primary-rgb, 51, 144, 236), 0.4);
   }
 
   100% {

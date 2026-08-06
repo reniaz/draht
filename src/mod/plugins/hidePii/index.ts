@@ -1,3 +1,5 @@
+import { getActions } from '../../../global';
+
 import { copyTextToClipboard } from '../../../util/clipboard';
 
 import { modLogger } from '../../api/Logger';
@@ -34,14 +36,19 @@ function scheduleScan() {
 }
 
 /**
- * One click reveals, the next copies.
+ * One press reveals, the next copies.
  *
- * Both swallow the event. These rows are buttons — a username opens a QR code, a phone
- * number a collectible lookup — so a click that fell through would reveal and act at once,
- * which is what the two-step exists to avoid. Capture phase, because the row's own handler
- * would otherwise run first.
+ * On **mousedown**, not click. `ListItem` runs its action through `useFastClick`, which on
+ * a non-touch device fires on mousedown — so a handler waiting for the click runs after
+ * the row has already copied the value, which is exactly what the first version did.
+ *
+ * The event is swallowed either way: these rows are buttons, and a press that fell through
+ * would reveal and act at once, which is what the two steps exist to avoid.
  */
-function handleClick(e: MouseEvent) {
+function handlePress(e: MouseEvent) {
+  // Only the primary button; right-click should still reach the context menu.
+  if (e.button !== 0) return;
+
   const hit = resolveClick(e.target as Element | null);
   if (!hit) return;
 
@@ -61,9 +68,26 @@ function handleClick(e: MouseEvent) {
     hit.element.classList.remove(COPIED_CLASS);
     void (hit.element as HTMLElement).offsetWidth;
     hit.element.classList.add(COPIED_CLASS);
+
+    // The same confirmation the row itself would have shown, so a copy through this looks
+    // no different from a copy through Telegram.
+    getActions().showNotification({ message: 'Copied' });
   } catch (err) {
     logger.error('could not copy', err);
   }
+}
+
+/**
+ * Swallows the click that follows a press we handled.
+ *
+ * Without it the row's click-phase handlers still run on touch devices, and any anchor
+ * inside the value would follow its href.
+ */
+function handleClick(e: MouseEvent) {
+  if (!resolveClick(e.target as Element | null)) return;
+
+  e.preventDefault();
+  e.stopPropagation();
 }
 
 export default definePlugin({
@@ -78,6 +102,7 @@ export default definePlugin({
 
   start() {
     document.body.classList.add(BODY_CLASS);
+    document.addEventListener('mousedown', handlePress, true);
     document.addEventListener('click', handleClick, true);
 
     tagPii(document.body);
@@ -94,6 +119,7 @@ export default definePlugin({
     if (scanHandle !== undefined) cancelAnimationFrame(scanHandle);
     scanHandle = undefined;
 
+    document.removeEventListener('mousedown', handlePress, true);
     document.removeEventListener('click', handleClick, true);
     document.body.classList.remove(BODY_CLASS);
     untagPii(document.body);
