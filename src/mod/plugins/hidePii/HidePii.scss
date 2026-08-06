@@ -1,10 +1,10 @@
-// Blurred text inside a padded chip.
+// Blurred text, with room around it.
 //
 // The blur comes from casting the glyphs as their own shadow rather than from
 // `filter: blur`. A filter blurs the element's whole rendered box — including its
 // background, giving soft mushy edges — and its spread is clipped wherever an ancestor
 // sets `overflow: hidden`, which is what made earlier attempts look sliced off at one end.
-// A text-shadow has no box to clip and leaves the chip's own edges crisp.
+// A text-shadow has no box to clip, so the smear fades out cleanly at its own edges.
 //
 // The padding is symmetric and generous on purpose: the smear needs room to fade out
 // inside its own box, and equal room on both sides is what makes it read as one
@@ -20,18 +20,21 @@ body.draht-hiding-pii {
 
     cursor: var(--custom-cursor, pointer);
 
-    // Transparent glyphs: nothing is rendered to select, copy, or read back, and the chip
-    // stays exactly as wide as the value it covers.
+    // Transparent glyphs: nothing is rendered to select, copy, or read back, and the
+    // element stays exactly as wide as the value it covers.
+    //
+    // No background. A filled chip behind the smear reads as a redaction bar — a second
+    // way of saying the same thing, and the louder of the two. The blur alone is the
+    // whole effect; the press target is the row, so nothing here needs to advertise
+    // itself as clickable.
     color: transparent;
-    background-color: var(--color-background-secondary);
     text-shadow: 0 0 0.5rem var(--color-text-secondary);
 
     user-select: none;
 
-    transition: background-color 150ms ease-out, text-shadow 150ms ease-out;
+    transition: text-shadow 150ms ease-out;
 
     &:hover {
-      background-color: var(--color-chat-hover);
       text-shadow: 0 0 0.4375rem var(--color-text);
     }
   }
@@ -42,12 +45,10 @@ body.draht-hiding-pii {
     padding: 0;
 
     color: inherit;
-    background-color: transparent;
     text-shadow: none;
     user-select: auto;
 
     &:hover {
-      background-color: transparent;
       text-shadow: none;
     }
   }
