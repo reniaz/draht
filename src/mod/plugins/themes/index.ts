@@ -108,6 +108,10 @@ function applySeed(seed: ThemeSeed) {
 
 export function apply() {
   try {
+    // The window controls are painted by Windows and cannot read the page, so a theme
+    // change has to be handed to them explicitly.
+    void import('../titleBar').then((m) => m.syncTitleBar()).catch(() => {});
+
     const selected = settings.store.theme || 'off';
 
     if (selected === 'off') {

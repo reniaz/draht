@@ -41,6 +41,11 @@ contextBridge.exposeInMainWorld('draht', {
     return ipcRenderer.invoke('draht:app-version');
   },
 
+  /** Recolours the window controls, which Windows draws and the page cannot style. */
+  setTitleBar(color: string, symbolColor: string) {
+    ipcRenderer.send('draht:set-titlebar', { color, symbolColor });
+  },
+
   /** Restores and raises the window. `window.focus()` alone cannot do this in Electron. */
   focusWindow() {
     ipcRenderer.send('draht:focus-window');

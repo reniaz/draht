@@ -1,0 +1,32 @@
+// With the window's own bar hidden, the page has to say where the window can be dragged.
+//
+// Drag regions are put on the headers that already exist rather than on a strip laid over
+// the top of the app. An overlay would swallow every click in the band it covers — which
+// on this layout is the hamburger, the search box and the chat header — and getting that
+// back means punching holes in it for each one. The headers are already the right shape.
+body.draht-frameless {
+  .LeftMainHeader,
+  .MiddleHeader,
+  #MiddleColumn > .draht-tabbar {
+    -webkit-app-region: drag;
+  }
+
+  // Everything inside them that is meant to be operated, put back. A drag region eats
+  // clicks, so anything not listed here stops working the moment the frame goes.
+  .LeftMainHeader button,
+  .LeftMainHeader input,
+  .LeftMainHeader .SearchInput,
+  .LeftMainHeader .DropdownMenu,
+  .MiddleHeader button,
+  .MiddleHeader input,
+  .MiddleHeader .ChatInfo,
+  .MiddleHeader .Transition,
+  #MiddleColumn > .draht-tabbar .draht-tab {
+    -webkit-app-region: no-drag;
+  }
+
+  // Room for the window controls, which Windows draws over the top right of the page.
+  .MiddleHeader {
+    padding-right: 8.5rem;
+  }
+}

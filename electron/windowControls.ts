@@ -27,6 +27,24 @@ export function initWindowControls(getWindow: () => BrowserWindow | undefined) {
     window.focus();
   });
 
+  /**
+   * Recolours the window controls to match the theme.
+   *
+   * The controls are drawn by Windows, so the renderer cannot style them — it can only say
+   * what colour they should be. Called whenever the theme changes, which is the only time
+   * the answer differs.
+   */
+  ipcMain.on('draht:set-titlebar', (_event, colors: { color: string; symbolColor: string }) => {
+    const window = getWindow();
+    if (!window || window.isDestroyed()) return;
+
+    try {
+      window.setTitleBarOverlay({ ...colors, height: 32 });
+    } catch {
+      // Only supported where an overlay exists; elsewhere the frame is simply native.
+    }
+  });
+
   ipcMain.on('draht:flash-window', () => {
     const window = getWindow();
     if (!window || window.isDestroyed()) return;
