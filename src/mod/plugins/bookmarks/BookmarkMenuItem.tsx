@@ -1,4 +1,5 @@
 import type { FC } from '../../../lib/teact/teact';
+import { useEffect, useState } from '../../../lib/teact/teact';
 
 import type { ApiMessage } from '../../../api/types';
 
@@ -6,7 +7,9 @@ import { getGlobal } from '../../../global';
 import { getMessageText } from '../../../global/helpers';
 import { getPeerTitle } from '../../../global/helpers/peers';
 import { selectChat, selectSender } from '../../../global/selectors';
-import { addBookmark, isBookmarked, removeBookmark } from './store';
+import {
+  addBookmark, isBookmarked, removeBookmark, subscribe,
+} from './store';
 
 import MenuItem from '../../../components/ui/MenuItem';
 
@@ -19,6 +22,12 @@ import MenuItem from '../../../components/ui/MenuItem';
  */
 export const BookmarkMenuItem: FC<{ message: ApiMessage }> = ({ message }) => {
   const { chatId, id } = message;
+
+  // The list lives outside the global state, so saving one changes nothing Teact watches
+  // and the menu would go on offering "Bookmark" for a message it had just saved.
+  const [, forceUpdate] = useState(0);
+  useEffect(() => subscribe(() => forceUpdate((v) => v + 1)), []);
+
   const saved = isBookmarked(chatId, id);
 
   if (saved) {

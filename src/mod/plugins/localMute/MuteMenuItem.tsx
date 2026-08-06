@@ -1,10 +1,11 @@
 import type { FC } from '../../../lib/teact/teact';
+import { useEffect, useState } from '../../../lib/teact/teact';
 
 import type { ApiMessage } from '../../../api/types';
 
 import { getGlobal } from '../../../global';
 import {
-  EVERYWHERE, mute, muteScope, unmute,
+  EVERYWHERE, mute, muteScope, subscribe, unmute,
 } from './store';
 
 import MenuItem from '../../../components/ui/MenuItem';
@@ -17,6 +18,11 @@ import MenuItem from '../../../components/ui/MenuItem';
  * from again.
  */
 export const MuteMenuItems: FC<{ message: ApiMessage }> = ({ message }) => {
+  // The mute list lives outside the global state, so muting changes nothing Teact watches
+  // and the menu would go on offering to hide someone it had just hidden.
+  const [, forceUpdate] = useState(0);
+  useEffect(() => subscribe(() => forceUpdate((v) => v + 1)), []);
+
   const senderId = message.senderId;
 
   // Your own messages, and service messages with no sender, have nobody to mute.
