@@ -7,12 +7,18 @@
  */
 import { execFileSync } from 'node:child_process';
 
-/** Commit subjects that describe the release rather than anything in it. */
-const NOISE = [
-  /^\d+\.\d+\.\d+$/, // version bumps
-  /^\[Build\]$/i,
-  /^Merge /,
-];
+/**
+ * Release notes are opted into, not derived from every commit.
+ *
+ * A commit log records how something was built — including the wrong turns, the fixes to
+ * the fixes, and the tooling nobody using the app will ever see. Listing all of it tells a
+ * reader nothing about what changed for them. A commit worth announcing says so:
+ *
+ *     Release-note: Export a chat as an HTML file
+ *
+ * Anything without the trailer is invisible to the notes.
+ */
+const NOTE_TRAILER = /^[ 	]*Release-note:[ 	]*(.+?)[ 	]*$/gim;
 
 function git(args) {
   return execFileSync('git', args, { encoding: 'utf8' }).trim();
@@ -32,19 +38,25 @@ export function selectPreviousTag(tags, tag) {
   return tags[index + 1];
 }
 
-/** Commit subjects worth showing, newest first, with duplicates and noise removed. */
-export function filterSubjects(subjects) {
+/**
+ * The release notes declared in a range of commit messages, newest first.
+ *
+ * Duplicates are dropped: a feature reworked over several commits is one line to whoever
+ * reads the release, however many times it was touched.
+ */
+export function extractNotes(log) {
   const seen = new Set();
+  const notes = [];
 
-  return subjects
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .filter((line) => !NOISE.some((pattern) => pattern.test(line)))
-    .filter((line) => {
-      if (seen.has(line)) return false;
-      seen.add(line);
-      return true;
-    });
+  for (const [, note] of log.matchAll(NOTE_TRAILER)) {
+    const text = note.trim();
+    if (!text || seen.has(text)) continue;
+
+    seen.add(text);
+    notes.push(text);
+  }
+
+  return notes;
 }
 
 /**
@@ -55,8 +67,8 @@ export function buildNotes(tag, { owner, repo, version }) {
   const previous = selectPreviousTag(tags, tag);
 
   const range = previous ? `${previous}..${tag}` : tag;
-  const subjects = git(['log', range, '--no-merges', '--format=%s']).split('\n');
-  const changes = filterSubjects(subjects);
+  // Whole messages, not subjects: the trailer lives in the body.
+  const changes = extractNotes(git(['log', range, '--no-merges', '--format=%B']));
 
   const download = `https://github.com/${owner}/${repo}/releases/download/${tag}/Draht-Setup-${version}.exe`;
 

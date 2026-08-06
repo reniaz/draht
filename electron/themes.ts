@@ -149,6 +149,32 @@ export function initThemes() {
     }
   });
 
+  /**
+   * Saves whatever the renderer produced, wherever the user chooses.
+   *
+   * Defaults to Documents rather than the themes folder: this is for exports that are not
+   * themes, and dropping a chat transcript among the theme files would be a surprise.
+   */
+  ipcMain.handle('draht:save-file', async (
+    _event,
+    payload: { name: string; content: string; title?: string },
+  ) => {
+    try {
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        title: payload.title || 'Save',
+        defaultPath: join(app.getPath('documents'), payload.name),
+      });
+
+      if (canceled || !filePath) return undefined;
+
+      writeFileSync(filePath, payload.content, 'utf8');
+
+      return filePath;
+    } catch {
+      return undefined;
+    }
+  });
+
   ipcMain.on('draht:open-themes-folder', () => {
     void shell.openPath(ensureThemesDir());
   });

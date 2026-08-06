@@ -56,6 +56,11 @@ contextBridge.exposeInMainWorld('draht', {
     return ipcRenderer.invoke('draht:list-themes');
   },
 
+  /** Saves any file the renderer has produced, through the OS save dialog. */
+  saveFile(name: string, content: string, title?: string): Promise<string | undefined> {
+    return ipcRenderer.invoke('draht:save-file', { name, content, title });
+  },
+
   /** Saves a theme file, with the save dialog starting in the themes folder. */
   exportTheme(name: string, content: string): Promise<string | undefined> {
     return ipcRenderer.invoke('draht:export-theme', { name, content });

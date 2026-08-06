@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterSubjects, selectPreviousTag } from './notes.mjs';
+import { extractNotes, selectPreviousTag } from './notes.mjs';
 
 describe('selectPreviousTag', () => {
   // As `git tag --sort=-v:refname` returns them: highest version first.
@@ -25,22 +25,39 @@ describe('selectPreviousTag', () => {
   });
 });
 
-describe('filterSubjects', () => {
-  it('drops version-bump commits', () => {
-    expect(filterSubjects(['Fix the thing', '1.0.11'])).toEqual(['Fix the thing']);
+describe('extractNotes', () => {
+  it('takes only the lines that ask to be announced', () => {
+    // A commit log records how something was built, including the wrong turns and the
+    // tooling nobody using the app will ever see.
+    const log = [
+      'Fix a thing nobody will notice',
+      '',
+      'Release-note: Export a chat as an HTML file',
+      '',
+      'Some other commit with no trailer at all',
+    ].join('\n');
+
+    expect(extractNotes(log)).toEqual(['Export a chat as an HTML file']);
   });
 
-  it('drops build and merge commits', () => {
-    expect(filterSubjects(['[Build]', 'Merge branch mod', 'Real change']))
-      .toEqual(['Real change']);
+  it('keeps them newest first, as git hands them over', () => {
+    const log = ['Release-note: Second', '', 'Release-note: First'].join('\n');
+
+    expect(extractNotes(log)).toEqual(['Second', 'First']);
   });
 
-  it('keeps a version number that is part of a sentence', () => {
-    expect(filterSubjects(['Bump Electron to 1.0.11 for the ICU fix']))
-      .toEqual(['Bump Electron to 1.0.11 for the ICU fix']);
+  it('says a feature once, however many commits touched it', () => {
+    const log = ['Release-note: Chat tabs', '', 'Release-note: Chat tabs'].join('\n');
+
+    expect(extractNotes(log)).toEqual(['Chat tabs']);
   });
 
-  it('removes duplicates and blanks, preserving order', () => {
-    expect(filterSubjects(['A', '', 'B', 'A', '   '])).toEqual(['A', 'B']);
+  it('ignores an empty trailer rather than announcing a blank line', () => {
+    expect(extractNotes(['Release-note:   ', 'Release-note: Real'].join('\n')))
+      .toEqual(['Real']);
+  });
+
+  it('returns nothing when a release announces nothing', () => {
+    expect(extractNotes('Just some commits')).toEqual([]);
   });
 });
