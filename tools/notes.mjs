@@ -43,16 +43,22 @@ export function selectPreviousTag(tags, tag) {
  *
  * Duplicates are dropped: a feature reworked over several commits is one line to whoever
  * reads the release, however many times it was touched.
+ *
+ * So are earlier, shorter versions of the same line. A feature that grows over a few
+ * commits tends to have its note extended with it — "Export a chat as an HTML file"
+ * becoming "...with its photos and videos" — and announcing both says the same thing
+ * twice, the second time worse. Notes arrive newest first, so the fuller line is already
+ * in hand when its own beginning turns up.
  */
 export function extractNotes(log) {
-  const seen = new Set();
   const notes = [];
 
   for (const [, note] of log.matchAll(NOTE_TRAILER)) {
     const text = note.trim();
-    if (!text || seen.has(text)) continue;
+    if (!text) continue;
 
-    seen.add(text);
+    if (notes.some((kept) => kept === text || kept.startsWith(text))) continue;
+
     notes.push(text);
   }
 

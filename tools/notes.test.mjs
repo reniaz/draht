@@ -61,3 +61,23 @@ describe('extractNotes', () => {
     expect(extractNotes('Just some commits')).toEqual([]);
   });
 });
+
+describe('notes that grew with the feature', () => {
+  it('keeps the fullest version and drops its earlier beginnings', () => {
+    // Notes arrive newest first, so the extended line is in hand before the line it grew
+    // out of. Announcing both says the same thing twice, the second time worse.
+    const log = [
+      'Release-note: Export a chat as HTML, with its photos and videos',
+      '',
+      'Release-note: Export a chat as HTML',
+    ].join('\n');
+
+    expect(extractNotes(log)).toEqual(['Export a chat as HTML, with its photos and videos']);
+  });
+
+  it('keeps genuinely different notes', () => {
+    const log = ['Release-note: Chat tabs', '', 'Release-note: Blur profile details'].join('\n');
+
+    expect(extractNotes(log)).toHaveLength(2);
+  });
+});
