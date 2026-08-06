@@ -2,11 +2,26 @@ import type { MenuItemContextAction } from '../../../components/ui/ListItem';
 
 import { getActions, getGlobal } from '../../../global';
 
+import { selectChat } from '../../../global/selectors';
 import { modLogger } from '../../api/Logger';
 import { addSeam, removeSeam } from '../../api/Seams';
-import { definePlugin } from '../../api/types';
+import { definePluginSettings } from '../../api/Settings';
+import { definePlugin, OptionType } from '../../api/types';
 import { activeThemeVars, chatTitle, collectMessages } from './collect';
+import { fetchHistory } from './history';
 import { buildChatHtml } from './render';
+
+const settings = definePluginSettings({
+  maxMessages: {
+    type: OptionType.NUMBER,
+    displayName: 'Most messages to export',
+    description:
+      'A stop, not a target. Exporting a chat reads its history from Telegram a page at '
+      + 'a time, and a chat with a hundred thousand messages would otherwise mean a very '
+      + 'long wait and a file too large to open.',
+    default: 20000,
+  },
+});
 
 const logger = modLogger.scoped('ExportChat');
 
@@ -21,7 +36,18 @@ async function exportChat(chatId: string) {
   try {
     const global = getGlobal();
     const title = chatTitle(global, chatId);
-    const messages = collectMessages(global, chatId);
+    const chat = selectChat(global, chatId);
+    const limit = Math.max(1, Number(settings.store.maxMessages) || 20000);
+
+    getActions().showNotification({ message: `Exporting ${title}…` });
+
+    // The whole history, read from the server. The client holds only what has been
+    // scrolled through, so exporting from state gives whatever happened to be in memory.
+    let messages = chat ? await fetchHistory(chat, limit) : [];
+
+    // No chat object, or a history that cannot be read — fall back to what is loaded
+    // rather than writing an empty file.
+    if (!messages.length) messages = collectMessages(global, chatId);
 
     const html = buildChatHtml({
       title,
@@ -66,6 +92,8 @@ export default definePlugin({
     + 'chat to export it.',
   authors: ['Draht'],
   enabledByDefault: true,
+
+  settings,
 
   start() {
     addSeam('chatMenuItems', menuItems);

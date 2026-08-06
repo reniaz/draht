@@ -78,6 +78,17 @@ const EXAMPLE = `{
 }
 `;
 
+function exportsDir() {
+  return join(dirname(app.getPath('userData')), 'Draht', 'exports');
+}
+
+function ensureExportsDir() {
+  const dir = exportsDir();
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+
+  return dir;
+}
+
 function ensureThemesDir() {
   const dir = themesDir();
   const isNew = !existsSync(dir);
@@ -150,19 +161,21 @@ export function initThemes() {
   });
 
   /**
-   * Saves whatever the renderer produced, wherever the user chooses.
+   * Saves whatever the renderer produced, offering the exports folder first.
    *
-   * Defaults to Documents rather than the themes folder: this is for exports that are not
-   * themes, and dropping a chat transcript among the theme files would be a surprise.
+   * Its own folder beside the themes one, rather than Documents: exports are Draht's
+   * output, they accumulate, and dropping chat transcripts among someone's own documents
+   * is a mess made on their behalf.
    */
   ipcMain.handle('draht:save-file', async (
     _event,
     payload: { name: string; content: string; title?: string },
   ) => {
     try {
+      const dir = ensureExportsDir();
       const { canceled, filePath } = await dialog.showSaveDialog({
         title: payload.title || 'Save',
-        defaultPath: join(app.getPath('documents'), payload.name),
+        defaultPath: join(dir, payload.name),
       });
 
       if (canceled || !filePath) return undefined;

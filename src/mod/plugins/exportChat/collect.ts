@@ -14,7 +14,7 @@ import { findTheme } from '../themes';
 const MAIN_THREAD_ID = -1;
 
 /** A short description of what was sent, for anything that is not text. */
-function describeMedia(content: any): string | undefined {
+export function describeMedia(content: any): string | undefined {
   if (!content) return undefined;
 
   if (content.photo) return 'Photo';
@@ -38,6 +38,11 @@ function describeMedia(content: any): string | undefined {
  * mean paging the entire chat off the server. The header says how many were exported so
  * the file never implies it is complete.
  */
+/** Message text, however the message happens to carry it. */
+export function textOf(message: any): string {
+  return getMessageText(message)?.text || '';
+}
+
 export function collectMessages(global: GlobalState, chatId: string): ExportedMessage[] {
   const byId = selectChatMessages(global, chatId);
   const listed = selectListedIds(global, chatId, MAIN_THREAD_ID);
