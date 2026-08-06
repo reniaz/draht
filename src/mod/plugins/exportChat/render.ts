@@ -9,6 +9,9 @@ export type ExportedMessage = {
   attachment?: string;
   /** Kept by MessageLogger after the sender removed it. */
   isDeleted?: boolean;
+  /** Relative path of the file saved beside the transcript, when there is one. */
+  mediaFile?: string;
+  mediaKind?: 'photo' | 'video';
 };
 
 export type ExportOptions = {
@@ -49,9 +52,18 @@ function renderMessage(message: ExportedMessage) {
   if (message.isOutgoing) classes.push('own');
   if (message.isDeleted) classes.push('deleted');
 
-  const attachment = message.attachment
-    ? `<div class="attachment">${escapeHtml(message.attachment)}</div>`
-    : '';
+  let attachment = '';
+
+  if (message.mediaFile) {
+    const src = escapeHtml(message.mediaFile);
+    // `loading="lazy"` matters: a long chat can hold hundreds of images, and a browser
+    // asked for all of them at once will stall on opening the file.
+    attachment = message.mediaKind === 'video'
+      ? `<video class="media" controls preload="none" src="${src}"></video>`
+      : `<img class="media" loading="lazy" src="${src}" alt="">`;
+  } else if (message.attachment) {
+    attachment = `<div class="attachment">${escapeHtml(message.attachment)}</div>`;
+  }
 
   // Text carries the sender's own line breaks, which are the only formatting preserved.
   const text = message.text
@@ -78,6 +90,10 @@ ${text}${attachment}      </div>`;
 export function buildChatHtml({
   title, messages, vars, exportedAt,
 }: ExportOptions): string {
+  const saved = messages.filter((message) => message.mediaFile).length;
+  const mediaNote = saved
+    ? `${saved} photo${saved === 1 ? '' : 's'} and video${saved === 1 ? '' : 's'} saved beside this file.`
+    : 'Media is described, not included.';
   const theme = Object.entries(vars)
     .map(([name, value]) => `      ${name}: ${value};`)
     .join('\n');
@@ -163,6 +179,14 @@ ${theme}
   .msg.own .sender { color: inherit; }
   .time { color: var(--color-text-secondary, #888); white-space: nowrap; }
 
+  .media {
+    display: block;
+    max-width: 100%;
+    max-height: 24rem;
+    margin-top: 0.375rem;
+    border-radius: 0.5rem;
+  }
+
   .attachment {
     margin-top: 0.25rem;
     font-size: 0.8125rem;
@@ -187,7 +211,7 @@ ${theme}
 
 ${body}
 
-    <footer>Media is described, not included — the files stay in Telegram.</footer>
+    <footer>${escapeHtml(mediaNote)}</footer>
   </div>
 </body>
 </html>

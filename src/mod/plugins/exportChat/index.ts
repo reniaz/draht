@@ -8,6 +8,7 @@ import { addSeam, removeSeam } from '../../api/Seams';
 import { definePluginSettings } from '../../api/Settings';
 import { definePlugin, OptionType } from '../../api/types';
 import { activeThemeVars, chatTitle, collectMessages } from './collect';
+import { downloadMedia } from './download';
 import { fetchHistory } from './history';
 import { buildChatHtml } from './render';
 
@@ -21,15 +22,35 @@ const settings = definePluginSettings({
       + 'long wait and a file too large to open.',
     default: 20000,
   },
+  includeMedia: {
+    type: OptionType.BOOLEAN,
+    displayName: 'Include photos and videos',
+    description:
+      'Saves them beside the transcript. Documents are never included — an archive or an '
+      + 'installer is usually larger than the whole rest of the export put together.',
+    default: true,
+  },
+  maxFileMb: {
+    type: OptionType.NUMBER,
+    displayName: 'Largest file to include (MB)',
+    description: 'One long video is what makes an export take an age.',
+    default: 25,
+  },
+  maxTotalMb: {
+    type: OptionType.NUMBER,
+    displayName: 'Total media to include (MB)',
+    description: 'A thousand small files is what fills a disk.',
+    default: 500,
+  },
 });
 
 const logger = modLogger.scoped('ExportChat');
 
-function fileNameFor(title: string) {
+function folderNameFor(title: string) {
   const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const date = new Date().toISOString().slice(0, 10);
 
-  return `${slug || 'chat'}-${date}.html`;
+  return `${slug || 'chat'}-${date}`;
 }
 
 async function exportChat(chatId: string) {
@@ -43,11 +64,28 @@ async function exportChat(chatId: string) {
 
     // The whole history, read from the server. The client holds only what has been
     // scrolled through, so exporting from state gives whatever happened to be in memory.
-    let messages = chat ? await fetchHistory(chat, limit) : [];
+    let fetched = chat ? await fetchHistory(chat, limit) : [];
 
     // No chat object, or a history that cannot be read — fall back to what is loaded
     // rather than writing an empty file.
-    if (!messages.length) messages = collectMessages(global, chatId);
+    if (!fetched.length) {
+      fetched = collectMessages(global, chatId).map((exported) => ({ exported, raw: {} as any }));
+    }
+
+    const files: { name: string; text?: string; bytes?: Uint8Array }[] = [];
+
+    if (settings.store.includeMedia) {
+      getActions().showNotification({ message: 'Saving photos and videos…' });
+
+      const media = await downloadMedia(fetched, {
+        maxFileBytes: Math.max(1, Number(settings.store.maxFileMb) || 25) * 1024 * 1024,
+        maxTotalBytes: Math.max(1, Number(settings.store.maxTotalMb) || 500) * 1024 * 1024,
+      });
+
+      for (const file of media) files.push({ name: `media/${file.name}`, bytes: file.bytes });
+    }
+
+    const messages = fetched.map(({ exported }) => exported);
 
     const html = buildChatHtml({
       title,
@@ -56,21 +94,28 @@ async function exportChat(chatId: string) {
       exportedAt: Date.now(),
     });
 
-    const file = fileNameFor(title);
+    // The transcript first, so the folder opens on the thing worth reading.
+    files.unshift({ name: 'index.html', text: html });
 
-    if (window.draht?.saveFile) {
-      const saved = await window.draht.saveFile(file, html, 'Export chat');
+    if (window.draht?.saveExport) {
+      const saved = await window.draht.saveExport(folderNameFor(title), files);
       if (saved) {
-        getActions().showNotification({ message: `Exported ${messages.length} messages` });
+        const mediaCount = files.length - 1;
+        getActions().showNotification({
+          message: `Exported ${messages.length} messages`
+            + (mediaCount ? ` and ${mediaCount} files` : ''),
+        });
       }
+
       return;
     }
 
-    // Outside Electron there is no save dialog; a download is the only route.
+    // Outside Electron there is no folder to write into; the transcript alone is still
+    // worth having.
     const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = file;
+    link.download = `${folderNameFor(title)}.html`;
     link.click();
     URL.revokeObjectURL(url);
   } catch (err) {
@@ -88,8 +133,8 @@ const menuItems = (chatId: string): MenuItemContextAction[] => [{
 export default definePlugin({
   name: 'ExportChat',
   description:
-    'Save a chat as a single HTML file, styled with your current theme. Right-click a '
-    + 'chat to export it.',
+    'Save a chat as an HTML file styled with your current theme, with its photos and '
+    + 'videos beside it. Right-click a chat to export it.',
   authors: ['Draht'],
   enabledByDefault: true,
 

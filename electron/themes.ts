@@ -188,6 +188,38 @@ export function initThemes() {
     }
   });
 
+  /**
+   * Writes a whole export — the transcript and its media — into its own folder.
+   *
+   * A folder rather than a save dialog per file: an export with media is one thing made of
+   * many files, and asking where to put each of them is not a question anyone wants asked
+   * a hundred times. It lands in the exports folder under a name of its own and is then
+   * revealed, so the user sees where it went instead of being told.
+   */
+  ipcMain.handle('draht:save-export', async (
+    _event,
+    payload: { folder: string; files: { name: string; text?: string; bytes?: Uint8Array }[] },
+  ) => {
+    try {
+      const root = join(ensureExportsDir(), payload.folder);
+      mkdirSync(root, { recursive: true });
+
+      for (const file of payload.files) {
+        const target = join(root, file.name);
+        mkdirSync(dirname(target), { recursive: true });
+
+        if (file.text !== undefined) writeFileSync(target, file.text, 'utf8');
+        else if (file.bytes) writeFileSync(target, Buffer.from(file.bytes));
+      }
+
+      shell.showItemInFolder(join(root, 'index.html'));
+
+      return root;
+    } catch {
+      return undefined;
+    }
+  });
+
   ipcMain.on('draht:open-themes-folder', () => {
     void shell.openPath(ensureThemesDir());
   });

@@ -59,13 +59,22 @@ describe('fetching a chat history', () => {
     expect(calls[1].args.offsetId).toBe(101);
   });
 
+  it('hands back the raw message alongside the rendered one', async () => {
+    // Media is fetched after the history, and needs the message it came from.
+    pages.push(page([1]));
+
+    const [message] = await fetchHistory(chat, 10);
+
+    expect(message.raw.id).toBe(1);
+  });
+
   it('returns the transcript oldest first', async () => {
     // Telegram hands history back newest first; a transcript reads the other way.
     pages.push(page([3, 2, 1]));
 
     const messages = await fetchHistory(chat, 10_000);
 
-    expect(messages.map((m) => m.id)).toEqual([1, 2, 3]);
+    expect(messages.map((m) => m.exported.id)).toEqual([1, 2, 3]);
   });
 
   it('stops at the limit rather than reading a whole archive', async () => {
@@ -84,7 +93,7 @@ describe('fetching a chat history', () => {
 
     const [message] = await fetchHistory(chat, 10);
 
-    expect(message.sender).toBe('Alice');
+    expect(message.exported.sender).toBe('Alice');
   });
 
   it('gives up rather than looping when the offset stops moving', async () => {

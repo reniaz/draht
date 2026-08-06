@@ -1,6 +1,8 @@
 import type { ApiChat, ApiPeer } from '../../../api/types';
 import type { ExportedMessage } from './render';
 
+import type { ApiMessage } from '../../../api/types';
+
 import { callApi } from '../../../api/gramjs';
 import { getPeerTitle } from '../../../global/helpers/peers';
 import { describeMedia, textOf } from './collect';
@@ -21,6 +23,9 @@ const PAUSE_MS = 120;
 
 export type Progress = (fetched: number, total?: number) => void;
 
+/** The rendered message alongside the message it came from, for fetching its media. */
+export type FetchedMessage = { exported: ExportedMessage; raw: ApiMessage };
+
 function pause(ms: number) {
   return new Promise((resolve) => { setTimeout(resolve, ms); });
 }
@@ -39,8 +44,8 @@ export async function fetchHistory(
   chat: ApiChat,
   limit: number,
   onProgress?: Progress,
-): Promise<ExportedMessage[]> {
-  const collected: ExportedMessage[] = [];
+): Promise<FetchedMessage[]> {
+  const collected: FetchedMessage[] = [];
   const senders = new Map<string, string>();
   const lang = ((key: string) => key) as any;
 
@@ -76,14 +81,17 @@ export async function fetchHistory(
       if (!text && !attachment) continue;
 
       collected.push({
-        id: message.id,
-        sender: message.isOutgoing
-          ? 'You'
-          : (senders.get(String(message.senderId)) ?? 'Unknown'),
-        date: (message.date || 0) * 1000,
-        text,
-        isOutgoing: Boolean(message.isOutgoing),
-        attachment,
+        raw: message,
+        exported: {
+          id: message.id,
+          sender: message.isOutgoing
+            ? 'You'
+            : (senders.get(String(message.senderId)) ?? 'Unknown'),
+          date: (message.date || 0) * 1000,
+          text,
+          isOutgoing: Boolean(message.isOutgoing),
+          attachment,
+        },
       });
     }
 

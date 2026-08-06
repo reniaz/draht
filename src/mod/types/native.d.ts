@@ -17,6 +17,10 @@ type DrahtNative = {
   appVersion?: () => Promise<string | undefined>;
   exportTheme?: (name: string, content: string) => Promise<string | undefined>;
   saveFile?: (name: string, content: string, title?: string) => Promise<string | undefined>;
+  saveExport?: (
+    folder: string,
+    files: { name: string; text?: string; bytes?: Uint8Array }[],
+  ) => Promise<string | undefined>;
   listThemes: () => Promise<{ file: string; content: string }[]>;
   themesDir: () => Promise<string>;
   openThemesFolder: () => void;

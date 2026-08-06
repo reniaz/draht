@@ -56,6 +56,14 @@ contextBridge.exposeInMainWorld('draht', {
     return ipcRenderer.invoke('draht:list-themes');
   },
 
+  /** Writes an export folder — transcript plus media — and reveals it. */
+  saveExport(
+    folder: string,
+    files: { name: string; text?: string; bytes?: Uint8Array }[],
+  ): Promise<string | undefined> {
+    return ipcRenderer.invoke('draht:save-export', { folder, files });
+  },
+
   /** Saves any file the renderer has produced, through the OS save dialog. */
   saveFile(name: string, content: string, title?: string): Promise<string | undefined> {
     return ipcRenderer.invoke('draht:save-file', { name, content, title });
