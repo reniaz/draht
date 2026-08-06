@@ -72,27 +72,54 @@ describe('hiding profile PII', () => {
     expect(tagPii(root)).toBe(0);
   });
 
-  it('finds the hidden element from a click on something inside it', () => {
+  it('reveals from a press anywhere in the row, not just on the cover', () => {
+    // The row is a button that copies and is taller than the cover inside it, so a press
+    // just below used to reach the row and copy a value that was still hidden.
     tagPii(profile());
-    const inner = document.querySelector('.other-usernames')!;
 
-    expect(resolveClick(inner)).toEqual({ element: inner, action: 'reveal' });
+    const hit = resolveClick(document.querySelector('.subtitle'))!;
+
+    expect(hit.action).toBe('reveal');
+    expect(hit.elements.map((el) => el.textContent)).toContain('+49 151 23456789');
   });
 
-  it('copies on the click after the one that revealed it', () => {
+  it('reveals every covered value in the row together', () => {
+    // Revealing the main handle but not the secondary ones would be a strange half-state.
+    tagPii(profile());
+    const row = document.querySelectorAll('.ListItem')[1];
+
+    const hit = resolveClick(row.querySelector('.icon-mention'))!;
+
+    expect(hit.elements).toHaveLength(2);
+  });
+
+  it('copies on the press after the one that revealed it', () => {
     tagPii(profile());
     const phone = document.querySelector(`.title.${PII_CLASS}`)!;
 
     expect(resolveClick(phone)!.action).toBe('reveal');
     phone.classList.add(SHOWN_CLASS);
-    expect(resolveClick(phone)!.action).toBe('copy');
+
+    const hit = resolveClick(phone)!;
+    expect(hit.action).toBe('copy');
+    expect(hit.elements[0].textContent).toBe('+49 151 23456789');
   });
 
-  it('ignores clicks outside a tagged value', () => {
+  it('copies the primary value when the press was not on a value', () => {
+    tagPii(profile());
+    const row = document.querySelectorAll('.ListItem')[1];
+    for (const el of row.querySelectorAll(`.${PII_CLASS}`)) el.classList.add(SHOWN_CLASS);
+
+    const hit = resolveClick(row.querySelector('.subtitle'))!;
+
+    expect(hit.elements[0].textContent).toBe('@nejan');
+  });
+
+  it('leaves rows with nothing to hide alone', () => {
     tagPii(profile());
 
-    // The label, and the row itself, must keep their own behaviour.
-    expect(resolveClick(document.querySelector('.subtitle'))).toBeUndefined();
+    // The bio row keeps its own behaviour entirely.
+    expect(resolveClick(document.querySelectorAll('.ListItem')[2])).toBeUndefined();
     expect(resolveClick(null)).toBeUndefined();
   });
 

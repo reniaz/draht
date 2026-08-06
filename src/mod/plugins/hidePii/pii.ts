@@ -60,23 +60,33 @@ export function untagPii(root: ParentNode) {
 }
 
 /**
- * The tagged element a click landed on, and what that click should do.
+ * What a press anywhere in a profile row should do.
  *
- * Walks up from the target because the click usually lands on a text node's parent — a
- * link inside `.other-usernames`, say — rather than on the tagged element itself.
+ * Resolved from the row, not from the covered value. The row is a button that copies, and
+ * it is taller than the chip inside it — so a press a few pixels below the cover used to
+ * reach the row's own handler and copy a value that was still hidden, which is the exact
+ * thing being guarded against. Anywhere in the row now counts as pressing the cover.
  *
- * One click reveals, the next copies. Both are answered here rather than by the row's own
- * handler, which would otherwise open a QR code or a collectible lookup on the way past.
+ * Every covered value in the row is revealed together: a username row holds the main
+ * handle and the secondary ones, and revealing half of it would be a strange half-state.
  */
 export function resolveClick(target: Element | null): {
-  element: Element;
+  elements: Element[];
   action: 'reveal' | 'copy';
 } | undefined {
-  const element = target?.closest(`.${PII_CLASS}`);
-  if (!element) return undefined;
+  const row = target?.closest('.ListItem');
+  if (!row) return undefined;
 
-  return {
-    element,
-    action: element.classList.contains(SHOWN_CLASS) ? 'copy' : 'reveal',
-  };
+  const tagged = [...row.querySelectorAll(`.${PII_CLASS}`)];
+  if (!tagged.length) return undefined;
+
+  const hidden = tagged.filter((element) => !element.classList.contains(SHOWN_CLASS));
+  if (hidden.length) return { elements: hidden, action: 'reveal' };
+
+  // Revealed already, so this press copies. The value pressed directly if there is one,
+  // otherwise the row's primary value rather than whichever happens to be first.
+  const direct = target?.closest(`.${PII_CLASS}`);
+  const primary = row.querySelector(`.title.${PII_CLASS}`);
+
+  return { elements: [direct ?? primary ?? tagged[0]], action: 'copy' };
 }

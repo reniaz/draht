@@ -56,18 +56,20 @@ function handlePress(e: MouseEvent) {
   e.stopPropagation();
 
   if (hit.action === 'reveal') {
-    hit.element.classList.add(SHOWN_CLASS);
+    for (const element of hit.elements) element.classList.add(SHOWN_CLASS);
     return;
   }
 
+  const [element] = hit.elements;
+
   try {
-    copyTextToClipboard(hit.element.textContent || '');
+    copyTextToClipboard(element.textContent || '');
 
     // Restarted rather than merely added, so copying twice flashes twice instead of
     // looking like nothing happened the second time.
-    hit.element.classList.remove(COPIED_CLASS);
-    void (hit.element as HTMLElement).offsetWidth;
-    hit.element.classList.add(COPIED_CLASS);
+    element.classList.remove(COPIED_CLASS);
+    void (element as HTMLElement).offsetWidth;
+    element.classList.add(COPIED_CLASS);
 
     // The same confirmation the row itself would have shown, so a copy through this looks
     // no different from a copy through Telegram.
