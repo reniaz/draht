@@ -81,3 +81,25 @@ describe('notes that grew with the feature', () => {
     expect(extractNotes(log)).toHaveLength(2);
   });
 });
+
+describe('retiring a note', () => {
+  it('drops a line an earlier commit added', () => {
+    // A feature reworked mid-release is described twice, and the wordings often diverge
+    // too early for one to supersede the other by prefix.
+    const log = [
+      'Release-note-drop: Frameless window with themed controls',
+      '',
+      'Release-note: Frameless window with a title bar of its own',
+      '',
+      'Release-note: Frameless window with themed controls',
+    ].join('\n');
+
+    expect(extractNotes(log)).toEqual(['Frameless window with a title bar of its own']);
+  });
+
+  it('leaves everything else alone', () => {
+    const log = ['Release-note-drop: Gone', '', 'Release-note: Kept'].join('\n');
+
+    expect(extractNotes(log)).toEqual(['Kept']);
+  });
+});

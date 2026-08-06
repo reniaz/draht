@@ -20,6 +20,17 @@ import { execFileSync } from 'node:child_process';
  */
 const NOTE_TRAILER = /^[ 	]*Release-note:[ 	]*(.+?)[ 	]*$/gim;
 
+/**
+ * Retires a note added by an earlier commit.
+ *
+ *     Release-note-drop: Frameless window with the controls coloured by your theme
+ *
+ * A feature reworked mid-release ends up described twice, and the two wordings often
+ * diverge too early for one to supersede the other by prefix. Rewriting history to fix a
+ * sentence is not worth it; saying which line no longer applies is.
+ */
+const DROP_TRAILER = /^[ 	]*Release-note-drop:[ 	]*(.+?)[ 	]*$/gim;
+
 function git(args) {
   return execFileSync('git', args, { encoding: 'utf8' }).trim();
 }
@@ -51,11 +62,15 @@ export function selectPreviousTag(tags, tag) {
  * in hand when its own beginning turns up.
  */
 export function extractNotes(log) {
+  const dropped = new Set(
+    [...log.matchAll(DROP_TRAILER)].map(([, text]) => text.trim()).filter(Boolean),
+  );
+
   const notes = [];
 
   for (const [, note] of log.matchAll(NOTE_TRAILER)) {
     const text = note.trim();
-    if (!text) continue;
+    if (!text || dropped.has(text)) continue;
 
     if (notes.some((kept) => kept === text || kept.startsWith(text))) continue;
 
