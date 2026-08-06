@@ -1,47 +1,54 @@
-// Redacted with a solid bar rather than a blur.
+// Blurred text inside a padded chip.
 //
-// Two blur approaches were tried and both looked wrong. `filter: blur` blurs the
-// element's rendered box, so the result depends on how much text there is — a username
-// collapsed into a smudged lump while a longer phone number stayed legible at its edges.
-// Casting the glyphs as their own shadow blurred evenly but still read as text that had
-// gone wrong rather than text deliberately withheld.
+// The blur comes from casting the glyphs as their own shadow rather than from
+// `filter: blur`. A filter blurs the element's whole rendered box — including its
+// background, giving soft mushy edges — and its spread is clipped wherever an ancestor
+// sets `overflow: hidden`, which is what made earlier attempts look sliced off at one end.
+// A text-shadow has no box to clip and leaves the chip's own edges crisp.
 //
-// A bar has no such ambiguity: it is obviously a cover, it is identical at every length,
-// and there is no rendered text to squint at, select, or recover from a screenshot.
+// The padding is symmetric and generous on purpose: the smear needs room to fade out
+// inside its own box, and equal room on both sides is what makes it read as one
+// deliberate shape at any length rather than as text that ran out of space.
 body.draht-hiding-pii {
   .draht-pii {
     display: inline-block;
-    padding-inline: 0.375rem;
-    border-radius: var(--border-radius-default-tiny, 0.375rem);
+    padding: 0.0625rem 0.625rem;
+    // Never narrower than its own padding plus a little, so a two-character value still
+    // looks like the same component as a phone number.
+    min-width: 4rem;
+    border-radius: 0.5rem;
 
     cursor: var(--custom-cursor, pointer);
 
-    // Transparent glyphs keep the bar exactly as wide as the value it covers, so the
-    // layout does not shift when it is revealed.
+    // Transparent glyphs: nothing is rendered to select, copy, or read back, and the chip
+    // stays exactly as wide as the value it covers.
     color: transparent;
-    background-color: var(--color-text-secondary);
-    opacity: 0.25;
+    background-color: var(--color-background-secondary);
+    text-shadow: 0 0 0.5rem var(--color-text-secondary);
 
     user-select: none;
 
-    transition: opacity 150ms ease-out;
+    transition: background-color 150ms ease-out, text-shadow 150ms ease-out;
 
     &:hover {
-      opacity: 0.4;
+      background-color: var(--color-chat-hover);
+      text-shadow: 0 0 0.4375rem var(--color-text);
     }
   }
 
   .draht-pii-shown {
     display: inline;
-    padding-inline: 0;
+    min-width: 0;
+    padding: 0;
 
     color: inherit;
     background-color: transparent;
-    opacity: 1;
+    text-shadow: none;
     user-select: auto;
 
     &:hover {
-      opacity: 1;
+      background-color: transparent;
+      text-shadow: none;
     }
   }
 
