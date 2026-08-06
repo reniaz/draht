@@ -185,6 +185,22 @@ if (!app.requestSingleInstanceLock()) {
     const mainWindow = createWindow(startUrl, appOrigin);
     hasMainWindow = true;
 
+    /*
+     * The maximise button has two states and only the window knows which is true.
+     *
+     * Reported rather than tracked in the renderer: maximising also happens from a
+     * keyboard shortcut, a snap gesture and a double-click on the bar, and a copy of the
+     * state kept on the other side would drift out of step with every one of them.
+     */
+    const reportMaximized = () => {
+      if (mainWindow.isDestroyed()) return;
+
+      mainWindow.webContents.send('draht:window-maximized', mainWindow.isMaximized());
+    };
+
+    mainWindow.on('maximize', reportMaximized);
+    mainWindow.on('unmaximize', reportMaximized);
+
     // Backstop only — the splash normally goes when the window is shown. If the web app
     // never gets that far, the splash still must not sit on the user's screen forever.
     setTimeout(closeStartupSplash, SPLASH_TIMEOUT_MS);

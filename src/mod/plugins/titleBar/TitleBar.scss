@@ -98,6 +98,14 @@
   &:active {
     opacity: 0.7;
   }
+
+  // No ring, no outline. These are window buttons: the hover and press states say
+  // everything, and a focus box drawn around one after a click looks like damage.
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
 }
 
 // Red on hover, as every window on this platform does. Anything else reads as a button
@@ -108,10 +116,20 @@
 }
 
 body.draht-frameless {
+  /*
+   * The app is moved down, not padded.
+   *
+   * Padding leaves `position: fixed` descendants where they were — they resolve against
+   * the viewport, not against whatever is padded — which is why the middle column kept
+   * running under the bar while the left one looked correct. A transform on #root makes it
+   * the containing block for those too, so everything inside is bounded by it, and the
+   * height is reduced to match so nothing overflows the bottom.
+   */
   #root {
-    box-sizing: border-box;
-    padding-top: var(--draht-titlebar-height);
-    transition: padding-top 150ms ease-out;
+    height: calc(100% - var(--draht-titlebar-height));
+    margin-top: var(--draht-titlebar-height);
+    transform: translateZ(0);
+    transition: margin-top 150ms ease-out, height 150ms ease-out;
   }
 
   // Dragging by the headers as well, since the bar itself is deliberately thin.
@@ -157,7 +175,8 @@ body.draht-frameless.draht-maximized {
   }
 
   #root {
-    padding-top: 0;
+    height: 100%;
+    margin-top: 0;
   }
 
   &:has(.draht-titlebar-host:hover) {
@@ -170,7 +189,8 @@ body.draht-frameless.draht-maximized {
     }
 
     #root {
-      padding-top: var(--draht-titlebar-height);
+      height: calc(100% - var(--draht-titlebar-height));
+      margin-top: var(--draht-titlebar-height);
     }
   }
 }
