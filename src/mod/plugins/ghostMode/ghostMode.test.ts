@@ -234,3 +234,19 @@ describe('staying offline through activity', () => {
     expect(calls).toHaveLength(0);
   });
 });
+
+describe('sending a read receipt on purpose', () => {
+  it('lets exactly one read through and blocks again immediately', async () => {
+    // Hiding reads is a default, not a vow — but lifting the block for longer than the
+    // one call would let unrelated reads slip out behind it.
+    const { api } = await bootWith({ GhostMode: { enabled: true } });
+    const { sendReadReceipt } = await import('./readReceipt');
+
+    expect(api.isApiMethodBlocked('markMessageListRead')).toBe(true);
+
+    // No chat in this state, so nothing is sent — but the block must be intact either way.
+    sendReadReceipt('GhostMode', '-100123', ['markMessageListRead']);
+
+    expect(api.isApiMethodBlocked('markMessageListRead')).toBe(true);
+  });
+});

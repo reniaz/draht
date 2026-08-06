@@ -1,8 +1,13 @@
+import type { MenuItemContextAction } from '../../../components/ui/ListItem';
+
 import { callApi } from '../../../api/gramjs';
+import { getActions } from '../../../global';
 
 import {
   blockApiMethod, interceptApiMethod, unblockAllForOwner, unblockApiMethod,
 } from '../../api/ApiGuard';
+import { addSeam, removeSeam } from '../../api/Seams';
+import { sendReadReceipt } from './readReceipt';
 import { modLogger } from '../../api/Logger';
 import { definePluginSettings } from '../../api/Settings';
 import { definePlugin, OptionType } from '../../api/types';
@@ -192,6 +197,27 @@ function apply() {
   }
 }
 
+/**
+ * Offered only while reads are being hidden.
+ *
+ * With receipts reported normally there is nothing to send on purpose — the read has
+ * already gone — and an entry that does nothing is worse than no entry.
+ */
+const chatMenu = (chatId: string): MenuItemContextAction[] => {
+  if (!settings.store.hideReadReceipts) return [];
+
+  return [{
+    title: 'Send read receipt',
+    icon: 'readchats',
+    handler: () => {
+      const sent = sendReadReceipt(OWNER, chatId, READ_METHODS);
+      getActions().showNotification({
+        message: sent ? 'Read receipt sent' : 'Nothing to mark as read',
+      });
+    },
+  }];
+};
+
 export default definePlugin({
   name: 'GhostMode',
   description:
@@ -204,11 +230,13 @@ export default definePlugin({
 
   start() {
     apply();
+    addSeam('chatMenuItems', chatMenu);
     logger.info('started');
   },
 
   stop() {
     stopAsserting();
+    removeSeam('chatMenuItems', chatMenu);
     unblockAllForOwner(OWNER);
   },
 });
