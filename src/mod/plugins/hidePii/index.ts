@@ -53,9 +53,10 @@ export default definePlugin({
   name: 'HidePii',
   description: 'Blur phone numbers and usernames in profiles until you click them.',
   authors: ['Draht'],
-  // Off by default: it hides information, and that should be a decision rather than a
-  // surprise. Client behaviour, so the switch lives under Draht Settings -> General.
-  enabledByDefault: false,
+  // On by default. Profile details are the one thing on screen that identifies a real
+  // person, and the cost of hiding them is a click. Client behaviour, so the switch lives
+  // under Draht Settings -> General.
+  enabledByDefault: true,
   hidden: true,
 
   start() {
