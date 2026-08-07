@@ -367,8 +367,22 @@ function captureEdit(global: GlobalState, update: any): GlobalState | undefined 
 
   const oldText = getMessageText(cached);
   const newText = getMessageText(message);
+
+  /*
+   * An update carrying no text at all is not an edit.
+   *
+   * Reactions arrive as `updateMessage` with only the changed fields — no content — so
+   * `newText` is undefined while `oldText` is not, and comparing the two made every
+   * reaction look like the text had been removed. The message was then recorded as its own
+   * previous version, and shown struck through beneath itself.
+   *
+   * Checked before the equality test, because "undefined differs from the old text" is
+   * exactly the comparison that was wrong.
+   */
+  if (newText === undefined) return undefined;
+
   // Compare text only: entity arrays are rebuilt on every update and would always differ.
-  if (oldText === newText || oldText === undefined) return undefined;
+  if (oldText === undefined || oldText === newText) return undefined;
 
   const history = [...(cached.modEditHistory ?? []), {
     date: message.editDate * 1000,

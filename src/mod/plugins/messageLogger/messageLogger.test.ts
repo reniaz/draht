@@ -245,6 +245,20 @@ describe('messageLogger edit history', () => {
     expect(captureEdit(global, edit('message 1', 1700000100))).toBeUndefined();
   });
 
+  it('ignores a reaction, which carries no text at all', () => {
+    // The reported bug: reactions arrive as updateMessage with only the changed fields, so
+    // the new text is undefined while the old one is not. Comparing the two made every
+    // reaction look like the text had been removed, and the message was recorded as its
+    // own previous version — shown struck through beneath itself.
+    const global = makeGlobal({ '-100123': [1] });
+
+    expect(captureEdit(global, {
+      chatId: '-100123',
+      id: 1,
+      message: { editDate: 1700000100, reactions: { results: [{ count: 1 }] } },
+    })).toBeUndefined();
+  });
+
   it('ignores updates with no editDate', () => {
     const global = makeGlobal({ '-100123': [1] });
 
