@@ -3,7 +3,9 @@ import { getActions } from '../../../global';
 import { copyTextToClipboard } from '../../../util/clipboard';
 
 import { modLogger } from '../../api/Logger';
-import { definePlugin } from '../../api/types';
+import { definePluginSettings } from '../../api/Settings';
+import { definePlugin, OptionType } from '../../api/types';
+import { askBeforeReveal } from './actions';
 import {
   COPIED_CLASS, resolveClick, SHOWN_CLASS, tagPii, untagPii,
 } from './pii';
@@ -11,6 +13,23 @@ import {
 import './HidePii.scss';
 
 const logger = modLogger.scoped('HidePii');
+
+const settings = definePluginSettings({
+  confirmPhone: {
+    type: OptionType.BOOLEAN,
+    displayName: 'Ask before showing a phone number',
+    description:
+      'A stray click otherwise puts it on screen with no way to take it back, which is '
+      + 'the whole thing the cover exists to prevent.',
+    default: true,
+  },
+  confirmUsername: {
+    type: OptionType.BOOLEAN,
+    displayName: 'Ask before showing a username',
+    description: 'Off by default: a handle is public anyway, and asking every time is friction.',
+    default: false,
+  },
+});
 const BODY_CLASS = 'draht-hiding-pii';
 
 let observer: MutationObserver | undefined;
@@ -56,7 +75,17 @@ function handlePress(e: MouseEvent) {
   e.stopPropagation();
 
   if (hit.action === 'reveal') {
-    for (const element of hit.elements) element.classList.add(SHOWN_CLASS);
+    const reveal = () => {
+      for (const element of hit.elements) element.classList.add(SHOWN_CLASS);
+    };
+
+    const needsConfirming = hit.kind === 'phone'
+      ? settings.store.confirmPhone
+      : settings.store.confirmUsername;
+
+    if (needsConfirming) askBeforeReveal(hit.kind, reveal);
+    else reveal();
+
     return;
   }
 
@@ -101,6 +130,8 @@ export default definePlugin({
   // under Draht Settings -> General.
   enabledByDefault: true,
   hidden: true,
+
+  settings,
 
   start() {
     document.body.classList.add(BODY_CLASS);

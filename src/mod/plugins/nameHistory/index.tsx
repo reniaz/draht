@@ -3,11 +3,23 @@ import type { GlobalState } from '../../../global/types';
 import { getUserFullName } from '../../../global/helpers/users';
 import { modLogger } from '../../api/Logger';
 import { addSeam, removeSeam } from '../../api/Seams';
-import { definePlugin } from '../../api/types';
+import { definePluginSettings } from '../../api/Settings';
+import { definePlugin, OptionType } from '../../api/types';
 import NameHistoryRow from './NameHistoryRow';
 import { clearHistory, recordChange, restore } from './store';
 
 const logger = modLogger.scoped('NameHistory');
+
+const settings = definePluginSettings({
+  showOwnProfile: {
+    type: OptionType.BOOLEAN,
+    displayName: 'Show it on your own profile too',
+    description:
+      'Off by default. You already know what you used to be called, and it is one more '
+      + 'identifying line on the profile you are most likely to have on screen.',
+    default: false,
+  },
+});
 
 function mainUsername(peer: any): string | undefined {
   return peer?.usernames?.find((u: any) => u.isActive)?.username || peer?.username;
@@ -57,7 +69,9 @@ const onChat = (global: GlobalState, update: any) => {
   return undefined;
 };
 
-const profileRow = (peerId: string) => <NameHistoryRow peerId={peerId} />;
+const profileRow = (peerId: string) => (
+  <NameHistoryRow peerId={peerId} showOwn={Boolean(settings.store.showOwnProfile)} />
+);
 
 export default definePlugin({
   name: 'NameHistory',
@@ -66,6 +80,8 @@ export default definePlugin({
     + 'cheapest impersonation signal there is, and Telegram shows nothing.',
   authors: ['Draht'],
   enabledByDefault: true,
+
+  settings,
 
   apiUpdates: {
     updateUser: onUser,

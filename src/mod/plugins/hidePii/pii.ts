@@ -11,6 +11,13 @@
  */
 export const PII_ICONS = ['icon-phone', 'icon-mention', 'icon-link'];
 
+/** A phone number is worth more to a stranger than a handle, so they are asked about separately. */
+export type PiiKind = 'phone' | 'username';
+
+function kindOf(row: Element): PiiKind {
+  return row.querySelector('.icon-phone') ? 'phone' : 'username';
+}
+
 /** Marks an element as hidden until clicked. */
 export const PII_CLASS = 'draht-pii';
 
@@ -73,6 +80,7 @@ export function untagPii(root: ParentNode) {
 export function resolveClick(target: Element | null): {
   elements: Element[];
   action: 'reveal' | 'copy';
+  kind: PiiKind;
 } | undefined {
   const row = target?.closest('.ListItem');
   if (!row) return undefined;
@@ -80,13 +88,15 @@ export function resolveClick(target: Element | null): {
   const tagged = [...row.querySelectorAll(`.${PII_CLASS}`)];
   if (!tagged.length) return undefined;
 
+  const kind = kindOf(row);
+
   const hidden = tagged.filter((element) => !element.classList.contains(SHOWN_CLASS));
-  if (hidden.length) return { elements: hidden, action: 'reveal' };
+  if (hidden.length) return { elements: hidden, action: 'reveal', kind };
 
   // Revealed already, so this press copies. The value pressed directly if there is one,
   // otherwise the row's primary value rather than whichever happens to be first.
   const direct = target?.closest(`.${PII_CLASS}`);
   const primary = row.querySelector(`.title.${PII_CLASS}`);
 
-  return { elements: [direct ?? primary ?? tagged[0]], action: 'copy' };
+  return { elements: [direct ?? primary ?? tagged[0]], action: 'copy', kind };
 }

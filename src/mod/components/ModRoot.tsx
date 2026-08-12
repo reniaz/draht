@@ -2,6 +2,7 @@ import type { FC } from '../../lib/teact/teact';
 import { memo } from '../../lib/teact/teact';
 
 import BookmarksModal from '../plugins/bookmarks/BookmarksModal';
+import ConfirmRevealDialog from '../plugins/hidePii/ConfirmRevealDialog';
 import TitleBar from '../plugins/titleBar/TitleBar';
 import DeletedLogModal from '../plugins/messageLogger/DeletedLogModal';
 import HistoryModal from '../plugins/messageLogger/HistoryModal';
@@ -24,6 +25,7 @@ const ModRoot: FC = () => (
     <HistoryModal />
     <DeletedLogModal />
     <BookmarksModal />
+    <ConfirmRevealDialog />
     <TitleBar />
     <UpdateModal />
   </>

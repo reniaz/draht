@@ -73,3 +73,14 @@ body.draht-delete-style-overlay .Message.draht-deleted {
 body.draht-hide-sponsored .SponsoredMessage {
   display: none !important;
 }
+
+/*
+ * The delete-photo confirmation is rendered from inside the media viewer's own actions, so
+ * it opens beneath the photo it is asking about — unreachable, with the viewer covering it.
+ *
+ * Raised above the viewer rather than above everything: only this dialog is affected, so
+ * menus and other overlays keep the order upstream gave them.
+ */
+#portals .Modal.delete {
+  z-index: calc(var(--z-media-viewer, 1500) + 20);
+}

@@ -72,6 +72,15 @@ describe('hiding profile PII', () => {
     expect(tagPii(root)).toBe(0);
   });
 
+  it('says whether the row holds a phone number or a handle', () => {
+    // The two are confirmed separately: a number is worth more to a stranger than a
+    // handle, and asking about both every time is friction nobody keeps.
+    tagPii(profile());
+
+    expect(resolveClick(document.querySelector('.icon-phone'))!.kind).toBe('phone');
+    expect(resolveClick(document.querySelector('.icon-mention'))!.kind).toBe('username');
+  });
+
   it('reveals from a press anywhere in the row, not just on the cover', () => {
     // The row is a button that copies and is taller than the cover inside it, so a press
     // just below used to reach the row and copy a value that was still hidden.
