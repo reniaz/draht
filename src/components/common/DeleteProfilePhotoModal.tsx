@@ -49,6 +49,9 @@ const DeleteProfilePhotoModal: FC<OwnProps> = ({
   return (
     <Modal
       isOpen={isOpen}
+      // #region mod
+      isNativeDialog
+      // #endregion mod
       onClose={onClose}
       onEnter={handleDeletePhoto}
       className="delete dialog-buttons-column"

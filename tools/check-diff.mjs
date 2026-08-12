@@ -23,6 +23,10 @@ const ALLOWLIST = {
   'src/global/actions/apiUpdaters/messages.ts': 10,
   'src/components/middle/message/Message.tsx': 6,
 
+  // The photo this asks about is a top-layer <dialog>, which no z-index can sit above,
+  // so the confirmation has to be one too.
+  'src/components/common/DeleteProfilePhotoModal.tsx': 5,
+
   // Shows a peer's previous names in their profile, and what a message said before it
   // was edited next to what it says now.
   'src/components/common/profile/ChatExtra.tsx': 8,
