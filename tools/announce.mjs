@@ -101,7 +101,12 @@ if (DISCORD_WEBHOOK) {
       description: truncate(changeList.map((line) => `• ${line}`).join('\n')),
       // Telegram blue, matching the icon.
       color: 0x2AABEE,
-      fields: [{ name: 'Download', value: `[Draht-Setup-${version}.exe](${notes.download})` }],
+      fields: [{
+        name: 'Download',
+        value: `[Windows](${notes.downloads.windows})`
+          + ` · [Linux AppImage](${notes.downloads.appImage})`
+          + ` · [Fedora rpm](${notes.downloads.rpm})`,
+      }],
       footer: { text: 'Existing installs update on next launch' },
     }],
   });
@@ -116,7 +121,10 @@ if (TELEGRAM_TOKEN) {
       '',
       truncate(changeList.map((line) => `• ${escapeHtml(line)}`).join('\n')),
       '',
-      `<a href="${notes.download}">Download</a> · <a href="${releaseUrl}">Release notes</a>`,
+      `Download: <a href="${notes.downloads.windows}">Windows</a>`
+      + ` · <a href="${notes.downloads.appImage}">Linux AppImage</a>`
+      + ` · <a href="${notes.downloads.rpm}">Fedora rpm</a>`,
+      `<a href="${releaseUrl}">Release notes</a>`,
       '',
       '<i>Existing installs update on next launch.</i>',
     ].join('\n');

@@ -46,14 +46,31 @@ BASE_URL=https://web.telegram.org/a/
 | `npm run mod:dev` | Vite dev server + Electron with DevTools. Fast iteration. |
 | `npm run mod:build` | Production build of the web app and the shell. |
 | `npm run mod:start` | Runs the built app. |
-| `npm run mod:package` | Builds a Windows installer into `release/`. |
+| `npm run mod:package` | Builds this platform's installers into `release/`. |
 | `npm run mod:verify` | Typecheck + tests + upstream diff budget. |
 | `npm run mod:smoke` | Checks the shell's transport (workers, IndexedDB, Cache API). |
 | `npm run mod:icon` | Regenerates icon PNG/ICO from the SVGs. |
 
 ### Distributing it
 
-`npm run mod:package` produces `release/Draht-Setup-<version>.exe`.
+`npm run mod:package` builds whatever the host platform can build — electron-builder
+cannot cross-compile these formats:
+
+| Host | Artefacts |
+|---|---|
+| Windows | `Draht-Setup-<version>.exe` (NSIS) |
+| Linux | `Draht-<version>.AppImage`, `Draht-<version>.rpm` |
+
+The AppImage is the portable Linux build: it runs from wherever it is put and updates
+itself in place, no root and no package manager. The rpm is the native install for Fedora
+and anything else rpm-based, and updates through `dnf` (see *Updating*).
+
+Building the rpm needs `libxcrypt-compat` — electron-builder's bundled `fpm` is a Ruby
+program linked against `libcrypt.so.1`, which Fedora no longer installs by default:
+
+```bash
+sudo dnf install libxcrypt-compat
+```
 
 > **Your API credentials are compiled into that installer.** Anyone you send it to will be
 > using *your* `api_id`. Telegram rate-limits and can ban an `api_id` for the behaviour of
@@ -62,7 +79,42 @@ BASE_URL=https://web.telegram.org/a/
 > credentials.
 
 The build is unsigned, so Windows SmartScreen will warn on first run — recipients need
-*More info* → *Run anyway*. Silencing that needs a real code-signing certificate.
+*More info* → *Run anyway*. Silencing that needs a real code-signing certificate. Nothing
+on Linux warns; the rpm is installed with `--nogpgcheck` because it is not signed either.
+
+### Releasing it
+
+`npm run mod:release` builds, tags, publishes and announces.
+
+Pushing the tag goes over whatever git is configured for, SSH included. Creating the
+release and uploading to it is the GitHub REST API, which takes a token and has no SSH
+equivalent — so sign in with the GitHub CLI (`gh auth login`) and the script reads that
+token, or set `GH_TOKEN` to a personal token with `repo` scope yourself.
+
+It publishes **the host platform's artefacts only**, so a complete release is the same command run once on
+Windows and once on Linux — both runs upload into the same tag, and the second one
+completes it. The run that finds the release still incomplete says which artefacts are
+missing and holds the announcement back, since the announcement links every download.
+
+### Updating
+
+Updates install at launch, behind the splash, on every platform. What that costs the user
+differs by how the app was installed:
+
+| Install | How it updates |
+|---|---|
+| Windows (NSIS) | Silent. |
+| Linux (AppImage) | Silent — the AppImage rewrites itself in place. |
+| Linux (rpm) | `dnf` under `pkexec`, so the desktop asks for a password. |
+
+Declining the password prompt is not a failure: the update stays pending and the app opens
+on the version already installed.
+
+### Linux notes
+
+Electron picks Wayland by itself on a Wayland session and falls back to X11 elsewhere. To
+override that — an X11 session under a compositor Electron misreads, say — set
+`ELECTRON_OZONE_PLATFORM_HINT=x11` (or `wayland`, or `auto`) before launching.
 
 ---
 

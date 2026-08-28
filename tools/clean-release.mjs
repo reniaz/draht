@@ -4,12 +4,12 @@
  *
  *   npm run mod:clean
  *
- * Packaging leaves ~450 MB of `win-unpacked` (a full unpacked Electron app, rebuilt from
- * scratch every time) plus a ~160 MB installer per version. None of it is needed once a
- * release is published — the installer is on GitHub and everything is reproducible from
+ * Packaging leaves ~450 MB of unpacked app (a full Electron tree, rebuilt from scratch
+ * every time) plus an installer per version and per format. None of it is needed once a
+ * release is published — the artefacts are on GitHub and everything is reproducible from
  * the tag — but it accumulates quietly until the disk notices.
  *
- * The installer for the current version is kept, so it can still be handed to someone
+ * The current version's artefacts are kept, so they can still be handed to someone
  * directly after a release.
  */
 import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
@@ -43,10 +43,12 @@ export function cleanRelease(keepVersion) {
     const full = join(RELEASE_DIR, entry);
 
     // The unpacked build is regenerated on every package and is never needed afterwards.
-    const isUnpacked = entry.endsWith('-unpacked') || entry === 'mac' || entry === 'linux-unpacked';
+    const isUnpacked = entry.endsWith('-unpacked') || entry === 'mac';
 
-    // Installers for versions other than the one just built.
-    const isOldInstaller = /^Draht-Setup-.+\.(exe|blockmap)$/.test(entry)
+    // Installers for versions other than the one just built, in every format the
+    // platforms produce: `Draht-Setup-<version>.exe`, `Draht-<version>.AppImage`,
+    // `Draht-<version>.rpm`, and the blockmaps beside them.
+    const isOldInstaller = /^Draht-.+\.(exe|AppImage|rpm|blockmap)$/.test(entry)
       && (!keepVersion || !entry.includes(`-${keepVersion}.`));
 
     if (!isUnpacked && !isOldInstaller) continue;

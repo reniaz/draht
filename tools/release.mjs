@@ -13,6 +13,9 @@
  * commit the build came from.
  *
  * Requires GH_TOKEN (a GitHub token with `repo` scope).
+ *
+ * One platform per run, since electron-builder builds the host's targets. Run it on
+ * Windows and on Linux and both sets of artefacts land on the same release.
  */
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -36,6 +39,39 @@ function die(message, hint) {
 
 const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
 const tag = `v${version}`;
+
+/**
+ * What each platform contributes to a release, update manifest included.
+ *
+ * A finished release carries every one of these. electron-builder only ever builds the
+ * host platform's targets, though — NSIS needs Windows, AppImage and rpm need Linux — so
+ * getting them all there is this script run once on each. Both runs upload into the same
+ * tag; each builds its own half and reports whichever half is still outstanding.
+ */
+const ARTIFACTS = {
+  win32: { name: 'Windows', assets: ['latest.yml', `Draht-Setup-${version}.exe`] },
+  linux: {
+    name: 'Linux',
+    assets: ['latest-linux.yml', `Draht-${version}.AppImage`, `Draht-${version}.rpm`],
+  },
+};
+
+const platform = ARTIFACTS[process.platform];
+if (!platform) {
+  die(
+    `Releasing from ${process.platform} is not set up.`,
+    'Run `npm run mod:release` on Windows and on Linux; each adds its own artefacts.',
+  );
+}
+
+/** The platforms this run cannot build, so it can say what the release is still missing. */
+const others = Object.entries(ARTIFACTS)
+  .filter(([key]) => key !== process.platform)
+  .map(([, entry]) => entry);
+
+function missingFrom(assets, wanted) {
+  return wanted.filter((name) => !assets.includes(name));
+}
 
 const builderConfig = readFileSync('electron-builder.yml', 'utf8');
 const owner = builderConfig.match(/^\s*owner:\s*(\S+)/m)?.[1];
@@ -80,6 +116,9 @@ async function ensureRelease() {
   console.log(`Created release ${tag}.\n`);
 }
 
+/**
+ * @returns the platforms whose artefacts are still not on the release.
+ */
 async function verifyRelease() {
   const all = await gh('/releases').then((r) => r.json());
   const forTag = all.filter((r) => r.tag_name === tag);
@@ -92,31 +131,61 @@ async function verifyRelease() {
   }
 
   const assets = forTag[0]?.assets.map((a) => a.name) ?? [];
-  const required = ['latest.yml', `Draht-Setup-${version}.exe`];
-  const missing = required.filter((name) => !assets.includes(name));
+  const missing = missingFrom(assets, platform.assets);
 
   if (missing.length) {
     die(
       `Release ${tag} is missing: ${missing.join(', ')}`,
-      'Without latest.yml the updater cannot see this release.\n'
+      'Without its update manifest the updater cannot see this release.\n'
       + `    Found: ${assets.join(', ') || '(nothing)'}`,
     );
   }
 
   console.log(`  Verified: ${assets.join(', ')}`);
+
+  return others.filter((other) => missingFrom(assets, other.assets).length);
+}
+
+/**
+ * Makes sure a GitHub API token is in the environment, borrowing `gh`'s if need be.
+ *
+ * SSH carries the commits and the tag, but a release is the REST API and that takes a
+ * token — GitHub exposes no SSH path to it. `gh auth login` already holds one with the
+ * scope this needs, so a machine with the CLI set up needs no personal token of its own.
+ *
+ * Put back into the environment rather than returned: electron-builder reads GH_TOKEN
+ * itself when it uploads the artefacts, and it runs as a child of this process.
+ */
+function ensureToken() {
+  if (process.env.GH_TOKEN || process.env.GITHUB_TOKEN) return;
+
+  let token;
+  try {
+    token = run('gh', ['auth', 'token']);
+  } catch {
+    // Not installed, or installed and logged out. Both end at the same message.
+  }
+
+  if (!token) {
+    die(
+      'No GitHub token available.',
+      'Either sign in with the GitHub CLI, which this reads automatically:\n'
+      + '    gh auth login\n\n'
+      + '  or create a token with `repo` scope at https://github.com/settings/tokens:\n'
+      + '    export GH_TOKEN=ghp_...     (bash)\n'
+      + '    $env:GH_TOKEN="ghp_..."     (PowerShell)\n'
+      + '    set GH_TOKEN=ghp_...        (cmd)',
+    );
+  }
+
+  process.env.GH_TOKEN = token;
+  console.log('Using the token from `gh auth`.\n');
 }
 
 console.log(`\nReleasing ${tag}\n`);
 
 /* 1. The token has to exist before we spend minutes building. */
-if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
-  die(
-    'GH_TOKEN is not set.',
-    'Create a token with `repo` scope at https://github.com/settings/tokens, then:\n'
-    + '    set GH_TOKEN=ghp_...        (cmd)\n'
-    + '    $env:GH_TOKEN="ghp_..."     (PowerShell)',
-  );
-}
+ensureToken();
 
 /*
  * 2. public/version.txt must match.
@@ -172,20 +241,26 @@ if (unpushed !== '0') {
  * the installer is built, so a build that fails — a file lock on `release/`, which Windows
  * produces readily — leaves both behind with nothing attached. That is an interrupted run
  * to be finished, not a released version, and the assets are what tell the two apart.
+ *
+ * And a release carrying only the *other* platform's artefacts is just as unfinished, so
+ * the assets that decide this are this platform's own.
  */
 const remoteTag = run('git', ['ls-remote', '--tags', 'origin', tag]);
 if (remoteTag) {
   const existing = await gh(`/releases/tags/${tag}`);
-  const assets = existing.ok ? (await existing.json()).assets ?? [] : [];
+  const assets = existing.ok ? ((await existing.json()).assets ?? []).map((a) => a.name) : [];
 
-  if (assets.length) {
+  if (assets.length && !missingFrom(assets, platform.assets).length) {
     die(
-      `Tag ${tag} already exists on the remote — version ${version} has been released.`,
+      `Tag ${tag} already exists on the remote and carries every ${platform.name} artefact `
+      + `— version ${version} has been released for ${platform.name}.`,
       'Bump "version" in package.json first.',
     );
   }
 
-  console.log(`Tag ${tag} is on the remote but its release is empty; finishing that run.\n`);
+  console.log(assets.length
+    ? `Release ${tag} exists; adding the ${platform.name} artefacts to it.\n`
+    : `Tag ${tag} is on the remote but its release is empty; finishing that run.\n`);
 }
 
 const hasLocalTag = Boolean(run('git', ['tag', '--list', tag]));
@@ -228,11 +303,12 @@ if (!remoteTag) runLive('git', ['push', 'origin', tag]);
  */
 await ensureRelease();
 
-console.log('\nPublishing...\n');
-runLive('npx', ['electron-builder', '--win', 'nsis', '--publish', 'always']);
+console.log(`\nPublishing the ${platform.name} artefacts...\n`);
+// No platform flag: electron-builder builds what `linux:`/`win:` configure for this host.
+runLive('npx', ['electron-builder', '--publish', 'always']);
 
 /* 8. Fail loudly if the assets did not all land on one release. */
-await verifyRelease();
+const pending = await verifyRelease();
 
 /*
  * 9. The artefacts are on GitHub now; the local copies are just disk.
@@ -244,19 +320,31 @@ console.log('');
 cleanRelease(version);
 
 /*
- * 10. Announce it.
+ * 10. Announce it, once the release is whole.
+ *
+ * The announcement links every platform's download, so sending it while half of them
+ * still 404 would point people at files that are not there. The run that completes the
+ * release is the one that announces it.
  *
  * Last, and unable to fail the release: the build is already published and clients can
  * already update, so an outage at Discord must not be reported as a failed release.
  */
-try {
-  runLive('node', ['tools/announce.mjs', version]);
-} catch {
-  // runLive throws on a non-zero exit, and letting that through would abort the script
-  // after the release is already live — reporting a published release as a failure.
-  console.error('\n  Announcing failed. The release itself is published and complete.');
-  console.error('  Re-run it with `npm run mod:announce -- ' + version + '`.');
-}
+if (pending.length) {
+  const names = pending.map((other) => other.name).join(' and ');
 
-console.log(`\n  Released ${tag}.`);
-console.log('  Installed copies will pick it up on their next launch.\n');
+  console.log(`\n  Added the ${platform.name} artefacts to ${tag}.`);
+  console.log(`  ${names} still missing — run \`npm run mod:release\` there to add them.`);
+  console.log('  The announcement goes out with that run, once every download exists.\n');
+} else {
+  try {
+    runLive('node', ['tools/announce.mjs', version]);
+  } catch {
+    // runLive throws on a non-zero exit, and letting that through would abort the script
+    // after the release is already live — reporting a published release as a failure.
+    console.error('\n  Announcing failed. The release itself is published and complete.');
+    console.error('  Re-run it with `npm run mod:announce -- ' + version + '`.');
+  }
+
+  console.log(`\n  Released ${tag} for Windows and Linux.`);
+  console.log('  Installed copies will pick it up on their next launch.\n');
+}

@@ -81,7 +81,12 @@ export function extractNotes(log) {
 }
 
 /**
- * @returns {{ previous: string|undefined, changes: string[], markdown: string }}
+ * @returns {{
+ *   previous: string|undefined,
+ *   changes: string[],
+ *   markdown: string,
+ *   downloads: { windows: string, appImage: string, rpm: string },
+ * }}
  */
 export function buildNotes(tag, { owner, repo, version }) {
   const tags = git(['tag', '--list', 'v*', '--sort=-v:refname']).split('\n').filter(Boolean);
@@ -91,12 +96,22 @@ export function buildNotes(tag, { owner, repo, version }) {
   // Whole messages, not subjects: the trailer lives in the body.
   const changes = extractNotes(git(['log', range, '--no-merges', '--format=%B']));
 
-  const download = `https://github.com/${owner}/${repo}/releases/download/${tag}/Draht-Setup-${version}.exe`;
+  const asset = (name) => `https://github.com/${owner}/${repo}/releases/download/${tag}/${name}`;
+
+  // One per platform. The AppImage is the portable Linux build; the rpm is the native
+  // install for Fedora and anything else using rpm.
+  const downloads = {
+    windows: asset(`Draht-Setup-${version}.exe`),
+    appImage: asset(`Draht-${version}.AppImage`),
+    rpm: asset(`Draht-${version}.rpm`),
+  };
 
   const body = [
     changes.length ? changes.map((line) => `- ${line}`).join('\n') : '- Maintenance release.',
     '',
-    `**[Download Draht ${version}](${download})**`,
+    `**Download Draht ${version}** — [Windows](${downloads.windows})`
+    + ` · [Linux AppImage](${downloads.appImage})`
+    + ` · [Fedora rpm](${downloads.rpm})`,
     '',
     'Existing installs update themselves on the next launch.',
     previous
@@ -104,5 +119,5 @@ export function buildNotes(tag, { owner, repo, version }) {
       : '',
   ].join('\n').trim();
 
-  return { previous, changes, markdown: body, download };
+  return { previous, changes, markdown: body, downloads };
 }

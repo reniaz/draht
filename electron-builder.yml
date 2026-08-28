@@ -58,12 +58,48 @@ nsis:
   artifactName: Draht-Setup-${version}.${ext}
   uninstallDisplayName: Draht
 
+# electron-builder's default AppImage runtime is the FUSE 2 one, and Fedora ships FUSE 3 —
+# an AppImage built with the default refuses to start there, with "dlopen(): error loading
+# libfuse.so.2". This runtime is static and needs no FUSE at all. It also stops the desktop
+# entry carrying a blanket `--no-sandbox`, passing it only where user namespaces are
+# genuinely unavailable.
+toolsets:
+  appimage: '1.0.3'
+
 linux:
+  # The AppImage updates itself in place with no privileges, so it keeps working wherever
+  # the app was put. The rpm is the native install for Fedora, and electron-updater
+  # updates that too, through `dnf` under `pkexec`.
   target:
-    - AppImage
+    - target: AppImage
+      arch: [x64]
+    - target: rpm
+      arch: [x64]
   icon: electron/assets/icon-wire-512.png
   category: Network
   synopsis: Telegram client with a plugin system
+  description: A Telegram client with a plugin system, built on telegram-tt.
+  # Lowercase, because it becomes `/usr/bin/<name>` and the desktop entry's `Icon`.
+  executableName: draht
+  # Electron takes its Wayland `app_id` and X11 `WM_CLASS` from `desktopName` in
+  # package.json; the desktop environment matches a running window to its launcher by
+  # exactly that. Without the two agreeing, GNOME shows the window under a generic icon
+  # and does not group it with the app. `syncDesktopName` names the installed file to
+  # match, and electron-builder writes `StartupWMClass` from the same value.
+  syncDesktopName: true
+  # The author field in package.json is upstream's, and carries no parseable email, which
+  # rpm requires. The GitHub no-reply address of the account that publishes the releases
+  # is the honest answer and is not a personal mailbox.
+  maintainer: reniaz <reniaz@users.noreply.github.com>
+  artifactName: Draht-${version}.${ext}
+  desktop:
+    entry:
+      Keywords: telegram;chat;messenger;im;
+
+rpm:
+  # Without this the package is named for the upstream project, `telegram-t`, which is
+  # what `dnf` would then list and what every later upgrade has to keep matching.
+  packageName: draht
 
 mac:
   target:

@@ -1,6 +1,7 @@
 import { app } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 import { type Splash, showSplash } from './splash';
@@ -21,6 +22,15 @@ import { type Splash, showSplash } from './splash';
 
 /** Beyond this, start the app and leave the update for next time. */
 const CHECK_TIMEOUT_MS = 8000;
+
+/**
+ * Beyond this, treat the install as refused and open the app.
+ *
+ * Generous, because the installers run synchronously and one of them is a password
+ * prompt: on an rpm install the user has to answer polkit before electron-updater
+ * returns at all.
+ */
+const INSTALL_TIMEOUT_MS = 120_000;
 
 /**
  * The splash outlives this module's work on purpose.
@@ -71,6 +81,23 @@ function withTimeout<T>(promise: Promise<T>, ms: number) {
 }
 
 /**
+ * Where electron-updater stages downloads.
+ *
+ * Mirrors electron-updater's own `getAppCacheDir`, which the package does not export and
+ * Electron's `app.getPath` has no equivalent of. Guessing at it instead would mean
+ * cleaning a directory the installers were never written to.
+ */
+function updaterCacheRoot() {
+  if (process.platform === 'win32') {
+    return process.env.LOCALAPPDATA || join(homedir(), 'AppData', 'Local');
+  }
+
+  if (process.platform === 'darwin') return join(homedir(), 'Library', 'Caches');
+
+  return process.env.XDG_CACHE_HOME || join(homedir(), '.cache');
+}
+
+/**
  * Removes installers left in the updater's cache.
  *
  * electron-updater stages a full installer — around 160 MB — and the copy for a version
@@ -79,9 +106,6 @@ function withTimeout<T>(promise: Promise<T>, ms: number) {
  */
 export function cleanUpdaterCache() {
   try {
-    const localAppData = process.env.LOCALAPPDATA;
-    if (!localAppData) return;
-
     // The folder name comes from `updaterCacheDirName` in app-update.yml, which
     // electron-builder derives from the package name — "telegram-t-updater" here, not
     // anything matching the product name. Reading it beats guessing.
@@ -91,16 +115,17 @@ export function cleanUpdaterCache() {
     const dirName = readFileSync(config, 'utf8').match(/^updaterCacheDirName:\s*(\S+)/m)?.[1];
     if (!dirName) return;
 
-    const pending = join(localAppData, dirName, 'pending');
+    const pending = join(updaterCacheRoot(), dirName, 'pending');
     if (!existsSync(pending)) return;
 
     const currentVersion = app.getVersion();
 
+    // Matched on the version rather than the extension, because the extension is
+    // whatever this platform installs from — `.exe`, `.AppImage`, `.rpm`.
     for (const file of readdirSync(pending)) {
-      if (!file.endsWith('.exe')) continue;
       // An installer for the version already running has done its job. Anything else is
       // a genuinely pending update and must be left alone.
-      if (!file.includes(`-${currentVersion}.exe`)) continue;
+      if (!file.includes(`-${currentVersion}.`)) continue;
 
       const full = join(pending, file);
       if (statSync(full).isFile()) rmSync(full, { force: true });
@@ -108,6 +133,33 @@ export function cleanUpdaterCache() {
   } catch {
     // Best-effort housekeeping; never worth failing startup over.
   }
+}
+
+/**
+ * Starts the install and reports whether the app is really quitting to perform it.
+ *
+ * `quitAndInstall` returns nothing either way. When the install does not take — a polkit
+ * prompt dismissed on Fedora, an AppImage running from an extracted directory — the app
+ * simply stays alive, and a caller that assumed otherwise leaves the splash as the only
+ * window and no client behind it. Waiting for the quit, or for the error that says there
+ * will not be one, is what keeps a refused update from stranding the launch.
+ */
+function installUpdate(): Promise<boolean> {
+  return new Promise((resolve) => {
+    // An install that neither quits nor reports an error is not one this can wait on.
+    const timer = setTimeout(() => resolve(false), INSTALL_TIMEOUT_MS);
+
+    const settle = (isInstalling: boolean) => {
+      clearTimeout(timer);
+      resolve(isInstalling);
+    };
+
+    app.once('before-quit', () => settle(true));
+    autoUpdater.once('error', () => settle(false));
+
+    // isSilent so a Windows installer does not raise its own window over the splash.
+    autoUpdater.quitAndInstall(true, true);
+  });
 }
 
 /**
@@ -156,9 +208,11 @@ export async function runStartupUpdate(iconPath: string): Promise<boolean> {
     // Give the splash a moment to paint the final state before the installer takes over.
     await new Promise((resolve) => { setTimeout(resolve, 400); });
 
-    // isSilent so NSIS does not raise its own window on top of the splash.
-    autoUpdater.quitAndInstall(true, true);
-    return true;
+    if (await installUpdate()) return true;
+
+    // Refused or failed: the update stays pending and this launch carries on.
+    splash?.setStatus('Starting Draht…');
+    return false;
   } catch {
     splash?.setStatus('Starting Draht…');
     return false;
